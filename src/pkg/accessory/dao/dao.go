@@ -32,6 +32,8 @@ type DAO interface {
 	Get(ctx context.Context, id int64) (accessory *Accessory, err error)
 	// Create the accessory
 	Create(ctx context.Context, accessory *Accessory) (id int64, err error)
+	// Update the accessory
+	Update(ctx context.Context, accessory *Accessory) error
 	// Delete the accessory specified by ID
 	Delete(ctx context.Context, id int64) (err error)
 	// DeleteAccessories deletes accessories by query
@@ -95,15 +97,27 @@ func (d *dao) Create(ctx context.Context, acc *Accessory) (int64, error) {
 	}
 	id, err := ormer.Insert(acc)
 	if err != nil {
-		if e := orm.AsConflictError(err, "accessory %s already exists under the artifact %d",
-			acc.Digest, acc.SubjectArtifactID); e != nil {
-			err = e
-		} else if e := orm.AsForeignKeyError(err, "the accessory %s tries to attach to a non existing artifact %d",
-			acc.Digest, acc.SubjectArtifactID); e != nil {
+		if e := orm.AsConflictError(err, "accessory %s already exists under the artifact %s",
+			acc.Digest, acc.SubjectArtifactDigest); e != nil {
 			err = e
 		}
 	}
 	return id, err
+}
+
+func (d *dao) Update(ctx context.Context, acc *Accessory) error {
+	ormer, err := orm.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+	n, err := ormer.Update(acc, "SubjectArtifactID")
+	if n == 0 {
+		if e := orm.AsConflictError(err, "accessory %s already exists", acc.Digest); e != nil {
+			err = e
+		}
+		return err
+	}
+	return err
 }
 
 func (d *dao) Delete(ctx context.Context, id int64) error {
@@ -118,7 +132,7 @@ func (d *dao) Delete(ctx context.Context, id int64) error {
 		return err
 	}
 	if n == 0 {
-		return errors.NotFoundError(nil).WithMessage("accessory %d not found", id)
+		return errors.NotFoundError(nil).WithMessagef("accessory %d not found", id)
 	}
 	return nil
 }

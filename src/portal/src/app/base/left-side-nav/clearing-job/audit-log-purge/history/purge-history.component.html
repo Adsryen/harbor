@@ -22,7 +22,7 @@
         </span>
     </clr-dg-action-bar>
     <clr-dg-column [clrDgField]="'id'">{{
-        'GC.JOB_ID' | translate
+        'REPLICATION.TASK_ID' | translate
     }}</clr-dg-column>
     <clr-dg-column>{{ 'GC.TRIGGER_TYPE' | translate }}</clr-dg-column>
     <clr-dg-column>{{ 'TAG_RETENTION.DRY_RUN' | translate }}</clr-dg-column>
@@ -50,10 +50,10 @@
             job.job_status.toUpperCase() | translate
         }}</clr-dg-cell>
         <clr-dg-cell>{{
-            job.creation_time | harborDatetime: 'medium'
+            job.creation_time | harborDatetime : 'medium'
         }}</clr-dg-cell>
         <clr-dg-cell>{{
-            job.update_time | harborDatetime: 'medium'
+            job.update_time | harborDatetime : 'medium'
         }}</clr-dg-cell>
         <clr-dg-cell>
             <a

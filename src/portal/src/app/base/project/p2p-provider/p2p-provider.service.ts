@@ -66,6 +66,7 @@ export enum EXECUTION_STATUS {
 export enum TRIGGER {
     MANUAL = 'manual',
     SCHEDULED = 'scheduled',
+    SCHEDULED_PAUSED = 'scheduled(paused)',
     EVENT_BASED = 'event_based',
 }
 
@@ -73,6 +74,19 @@ export const TRIGGER_I18N_MAP = {
     manual: 'P2P_PROVIDER.MANUAL',
     scheduled: 'P2P_PROVIDER.SCHEDULED',
     event_based: 'P2P_PROVIDER.EVENT_BASED',
+    'scheduled(paused)': 'JOB_SERVICE_DASHBOARD.SCHEDULE_PAUSED',
+};
+
+export enum DRAGONFLY_SCOPE {
+    SINGLE_SEED_PEER = 'single_seed_peer',
+    ALL_SEED_PEERS = 'all_seed_peers',
+    ALL_PEERS = 'all_peers',
+}
+
+export const DRAGONFLY_SCOPE_I18N_MAP = {
+    single_seed_peer: 'P2P_PROVIDER.DRAGONFLY.SCOPE_SINGLE_SEED_PEER',
+    all_seed_peers: 'P2P_PROVIDER.DRAGONFLY.SCOPE_ALL_SEED_PEERS',
+    all_peers: 'P2P_PROVIDER.DRAGONFLY.SCOPE_ALL_PEERS',
 };
 
 export const TIME_OUT: number = 7000;

@@ -13,7 +13,7 @@ import { catchError, map } from 'rxjs/operators';
 import { ReplicationPolicy } from '../../../../ng-swagger-gen/models/replication-policy';
 
 export const ADAPTERS_MAP = {
-    'ali-acr': 'Alibaba ACR',
+    'ali-acr': 'Alibaba Cloud ACR',
     'aws-ecr': 'Aws ECR',
     'azure-acr': 'Azure ACR',
     'docker-hub': 'Docker Hub',
@@ -29,9 +29,8 @@ export const ADAPTERS_MAP = {
     dtr: 'DTR',
     'tencent-tcr': 'Tencent TCR',
     'github-ghcr': 'Github GHCR',
+    'volcengine-cr': 'VolcEngine CR',
 };
-
-export const HELM_HUB: string = 'helm-hub';
 
 /**
  * Define the service methods to handle the endpoint related things.
@@ -177,7 +176,7 @@ export class EndpointDefaultService extends EndpointService {
     }
 
     public getEndpoint(endpointId: number | string): Observable<Endpoint> {
-        if (!endpointId || endpointId <= 0) {
+        if (!endpointId || +endpointId <= 0) {
             return observableThrowError('Bad request argument.');
         }
         let requestUrl: string = `${this._endpointUrl}/${endpointId}`;
@@ -207,7 +206,7 @@ export class EndpointDefaultService extends EndpointService {
         endpointId: number | string,
         endpoint: Endpoint
     ): Observable<any> {
-        if (!endpointId || endpointId <= 0) {
+        if (!endpointId || +endpointId <= 0) {
             return observableThrowError('Bad request argument.');
         }
         if (!endpoint) {
@@ -220,7 +219,7 @@ export class EndpointDefaultService extends EndpointService {
     }
 
     public deleteEndpoint(endpointId: number | string): Observable<any> {
-        if (!endpointId || endpointId <= 0) {
+        if (!endpointId || +endpointId <= 0) {
             return observableThrowError('Bad request argument.');
         }
         let requestUrl: string = `${this._endpointUrl}/${endpointId}`;
@@ -242,7 +241,7 @@ export class EndpointDefaultService extends EndpointService {
     public getEndpointWithReplicationRules(
         endpointId: number | string
     ): Observable<any> {
-        if (!endpointId || endpointId <= 0) {
+        if (!endpointId || +endpointId <= 0) {
             return observableThrowError('Bad request argument.');
         }
         let requestUrl: string = `${this._endpointUrl}/${endpointId}/policies`;

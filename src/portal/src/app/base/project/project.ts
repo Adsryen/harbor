@@ -23,7 +23,6 @@ export class Project {
     update_time: Date;
     current_user_role_id: number;
     repo_count: number;
-    chart_count: number;
     has_project_admin_role: boolean;
     is_member: boolean;
     role_name: string;
@@ -34,7 +33,9 @@ export class Project {
         prevent_vul: string | boolean;
         severity: string;
         auto_scan: string | boolean;
+        auto_sbom_generation: string | boolean;
         retention_id: number;
+        bandwidth: number;
     };
     constructor() {
         this.metadata = <any>{};

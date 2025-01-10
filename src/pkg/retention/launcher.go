@@ -210,7 +210,7 @@ func createJobs(repositoryRules map[selector.Repository]*lwp.Metadata, isDryRun 
 	for repository, policy := range repositoryRules {
 		jobData := &jobData{
 			Repository: repository,
-			JobName:    job.Retention,
+			JobName:    job.RetentionVendorType,
 			JobParams:  make(map[string]interface{}, 3),
 		}
 		// set dry run
@@ -278,7 +278,7 @@ func getProjects(ctx context.Context, projectMgr project.Manager) ([]*selector.C
 	return candidates, nil
 }
 
-func getRepositories(ctx context.Context, projectMgr project.Manager, repositoryMgr repository.Manager, projectID int64) ([]*selector.Candidate, error) {
+func getRepositories(ctx context.Context, _ project.Manager, repositoryMgr repository.Manager, projectID int64) ([]*selector.Candidate, error) {
 	var candidates []*selector.Candidate
 	/*
 		pro, err := projectMgr.Get(projectID)

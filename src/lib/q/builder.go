@@ -38,7 +38,7 @@ func Build(q, sort string, pageNumber, pageSize int64) (*Query, error) {
 	if err != nil {
 		return nil, err
 	}
-	sorts := parseSorting(sort)
+	sorts := ParseSorting(sort)
 	return &Query{
 		Keywords:   keywords,
 		Sorts:      sorts,
@@ -70,14 +70,17 @@ func parseKeywords(q string) (map[string]interface{}, error) {
 		if err != nil {
 			return nil, errors.New(err).
 				WithCode(errors.BadRequestCode).
-				WithMessage("invalid query string value: %s", strs[1])
+				WithMessagef("invalid query string value: %s", strs[1])
 		}
 		keywords[strs[0]] = value
 	}
 	return keywords, nil
 }
 
-func parseSorting(sort string) []*Sort {
+func ParseSorting(sort string) []*Sort {
+	if sort == "" {
+		return []*Sort{}
+	}
 	var sorts []*Sort
 	for _, sorting := range strings.Split(sort, ",") {
 		key := sorting

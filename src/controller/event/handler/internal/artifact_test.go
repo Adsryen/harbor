@@ -19,27 +19,40 @@ import (
 	"testing"
 	"time"
 
-	beegoorm "github.com/beego/beego/orm"
+	beegoorm "github.com/beego/beego/v2/client/orm"
 	"github.com/stretchr/testify/suite"
 
 	common_dao "github.com/goharbor/harbor/src/common/dao"
 	"github.com/goharbor/harbor/src/controller/event"
+	"github.com/goharbor/harbor/src/controller/scanner"
 	"github.com/goharbor/harbor/src/lib/config"
 	"github.com/goharbor/harbor/src/lib/orm"
 	"github.com/goharbor/harbor/src/pkg"
 	"github.com/goharbor/harbor/src/pkg/artifact"
 	_ "github.com/goharbor/harbor/src/pkg/config/db"
+	"github.com/goharbor/harbor/src/pkg/project"
 	"github.com/goharbor/harbor/src/pkg/repository/model"
 	"github.com/goharbor/harbor/src/pkg/tag"
 	tagmodel "github.com/goharbor/harbor/src/pkg/tag/model/tag"
+	scannerCtlMock "github.com/goharbor/harbor/src/testing/controller/scanner"
+	"github.com/goharbor/harbor/src/testing/mock"
+	artMock "github.com/goharbor/harbor/src/testing/pkg/artifact"
+	projectMock "github.com/goharbor/harbor/src/testing/pkg/project"
+	reportMock "github.com/goharbor/harbor/src/testing/pkg/scan/report"
+	taskMock "github.com/goharbor/harbor/src/testing/pkg/task"
 )
 
 // ArtifactHandlerTestSuite is test suite for artifact handler.
 type ArtifactHandlerTestSuite struct {
 	suite.Suite
 
-	ctx     context.Context
-	handler *Handler
+	ctx            context.Context
+	handler        *ArtifactEventHandler
+	projectManager project.Manager
+	scannerCtl     scanner.Controller
+	reportMgr      *reportMock.Manager
+	execMgr        *taskMock.ExecutionManager
+	artMgr         *artMock.Manager
 }
 
 // TestArtifactHandler tests ArtifactHandler.
@@ -51,8 +64,13 @@ func TestArtifactHandler(t *testing.T) {
 func (suite *ArtifactHandlerTestSuite) SetupSuite() {
 	common_dao.PrepareTestForPostgresSQL()
 	config.Init()
-	suite.handler = &Handler{}
 	suite.ctx = orm.NewContext(context.TODO(), beegoorm.NewOrm())
+	suite.projectManager = &projectMock.Manager{}
+	suite.scannerCtl = &scannerCtlMock.Controller{}
+	suite.execMgr = &taskMock.ExecutionManager{}
+	suite.reportMgr = &reportMock.Manager{}
+	suite.artMgr = &artMock.Manager{}
+	suite.handler = &ArtifactEventHandler{execMgr: suite.execMgr, reportMgr: suite.reportMgr, artMgr: suite.artMgr}
 
 	// mock artifact
 	_, err := pkg.ArtifactMgr.Create(suite.ctx, &artifact.Artifact{ID: 1, RepositoryID: 1})
@@ -142,4 +160,63 @@ func (suite *ArtifactHandlerTestSuite) TestOnPull() {
 		suite.Nil(err)
 		return int64(2) == repository.PullCount
 	}, 3*asyncFlushDuration, asyncFlushDuration/2, "wait for pull_count async update")
+}
+
+func (suite *ArtifactHandlerTestSuite) TestOnDelete() {
+	evt := &event.ArtifactEvent{Artifact: &artifact.Artifact{ID: 1, RepositoryID: 1, Digest: "mock-digest", References: []*artifact.Reference{{ChildDigest: "ref-1", ChildID: 2}, {ChildDigest: "ref-2", ChildID: 3}}}}
+	suite.execMgr.On("DeleteByVendor", suite.ctx, "IMAGE_SCAN", int64(1)).Return(nil).Times(1)
+	suite.execMgr.On("DeleteByVendor", suite.ctx, "IMAGE_SCAN", int64(2)).Return(nil).Times(1)
+	suite.execMgr.On("DeleteByVendor", suite.ctx, "IMAGE_SCAN", int64(3)).Return(nil).Times(1)
+	suite.artMgr.On("Count", suite.ctx, mock.Anything).Return(int64(0), nil).Times(3)
+	suite.reportMgr.On("DeleteByDigests", suite.ctx, "mock-digest", "ref-1", "ref-2").Return(nil).Times(1)
+	err := suite.handler.onDelete(suite.ctx, evt)
+	suite.Nil(err, "onDelete should return nil")
+}
+
+func (suite *ArtifactHandlerTestSuite) TestIsScannerUser() {
+	type args struct {
+		prefix string
+		event  *event.ArtifactEvent
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{"normal_true", args{"robot$", &event.ArtifactEvent{Operator: "robot$library+scanner+Trivy-2e6240a1-f3be-11ec-8fba-0242ac1e0009", Repository: "library/nginx"}}, true},
+		{"no_scanner_prefix_false", args{"robot$", &event.ArtifactEvent{Operator: "robot$library+Trivy-2e6240a1-f3be-11ec-8fba-0242ac1e0009", Repository: "library/nginx"}}, false},
+		{"operator_empty", args{"robot$", &event.ArtifactEvent{Operator: "", Repository: "library/nginx"}}, false},
+		{"normal_user", args{"robot$", &event.ArtifactEvent{Operator: "Trivy_sample", Repository: "library/nginx"}}, false},
+		{"normal_user_with_robotname", args{"robot$", &event.ArtifactEvent{Operator: "robot_Trivy", Repository: "library/nginx"}}, false},
+	}
+
+	for _, tt := range tests {
+		suite.Run(tt.name, func() {
+			if got := isScannerUser(suite.ctx, tt.args.event); got != tt.want {
+				suite.Errorf(nil, "isScannerUser() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_parseProjectName(t *testing.T) {
+	type args struct {
+		repoName string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{"normal repo name", args{"library/nginx"}, "library"},
+		{"three levels of repository", args{"library/nginx/nginx"}, "library"},
+		{"repo name without project name", args{"nginx"}, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := parseProjectName(tt.args.repoName); got != tt.want {
+				t.Errorf("parseProjectName() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

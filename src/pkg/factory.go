@@ -25,6 +25,11 @@ import (
 	"github.com/goharbor/harbor/src/pkg/project"
 	"github.com/goharbor/harbor/src/pkg/project/metadata"
 	"github.com/goharbor/harbor/src/pkg/repository"
+
+	// init the db config
+	_ "github.com/goharbor/harbor/src/pkg/config/db"
+	// init the rest config
+	_ "github.com/goharbor/harbor/src/pkg/config/rest"
 )
 
 // Define global resource manager.
@@ -89,6 +94,6 @@ func initRepositoryMgr(cacheEnabled bool) {
 	}
 }
 
-func initManifestManager(cacheEnabled bool) {
+func initManifestManager(_ bool) {
 	ManifestMgr = cachedManifest.NewManager()
 }

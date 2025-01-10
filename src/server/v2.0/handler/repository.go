@@ -55,7 +55,7 @@ type repositoryAPI struct {
 	artCtl  artifact.Controller
 }
 
-func (r *repositoryAPI) Prepare(ctx context.Context, operation string, params interface{}) middleware.Responder {
+func (r *repositoryAPI) Prepare(ctx context.Context, _ string, params interface{}) middleware.Responder {
 	if err := unescapePathParams(params, "RepositoryName"); err != nil {
 		r.SendError(ctx, err)
 	}
@@ -199,7 +199,7 @@ func (r *repositoryAPI) ListRepositories(ctx context.Context, params operation.L
 }
 
 func (r *repositoryAPI) GetRepository(ctx context.Context, params operation.GetRepositoryParams) middleware.Responder {
-	if err := r.RequireProjectAccess(ctx, params.ProjectName, rbac.ActionList, rbac.ResourceRepository); err != nil {
+	if err := r.RequireProjectAccess(ctx, params.ProjectName, rbac.ActionRead, rbac.ResourceRepository); err != nil {
 		return r.SendError(ctx, err)
 	}
 	repository, err := r.repoCtl.GetByName(ctx, fmt.Sprintf("%s/%s", params.ProjectName, params.RepositoryName))

@@ -1,16 +1,16 @@
-//  Copyright Project Harbor Authors
+// Copyright Project Harbor Authors
 //
-//  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//    http://www.apache.org/licenses/LICENSE-2.0
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the License is distributed on an "AS IS" BASIS,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the License for the specific language governing permissions and
-//  limitations under the License.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package repoproxy
 
@@ -28,6 +28,7 @@ import (
 	"github.com/goharbor/harbor/src/controller/proxy"
 	"github.com/goharbor/harbor/src/controller/registry"
 	"github.com/goharbor/harbor/src/lib"
+	"github.com/goharbor/harbor/src/lib/config"
 	"github.com/goharbor/harbor/src/lib/errors"
 	httpLib "github.com/goharbor/harbor/src/lib/http"
 	"github.com/goharbor/harbor/src/lib/log"
@@ -46,6 +47,8 @@ const (
 	ensureTagMaxRetry   = 60
 )
 
+var tooManyRequestsError = errors.New("too many requests to upstream registry").WithCode(errors.RateLimitCode)
+
 // BlobGetMiddleware handle get blob request
 func BlobGetMiddleware() func(http.Handler) http.Handler {
 	return middleware.New(func(w http.ResponseWriter, r *http.Request, next http.Handler) {
@@ -57,7 +60,7 @@ func BlobGetMiddleware() func(http.Handler) http.Handler {
 
 func handleBlob(w http.ResponseWriter, r *http.Request, next http.Handler) error {
 	ctx := r.Context()
-	art, p, proxyCtl, err := preCheck(ctx)
+	art, p, proxyCtl, err := preCheck(ctx, true)
 	if err != nil {
 		return err
 	}
@@ -93,14 +96,14 @@ func handleBlob(w http.ResponseWriter, r *http.Request, next http.Handler) error
 	return nil
 }
 
-func preCheck(ctx context.Context) (art lib.ArtifactInfo, p *proModels.Project, ctl proxy.Controller, err error) {
+func preCheck(ctx context.Context, withProjectMetadata bool) (art lib.ArtifactInfo, p *proModels.Project, ctl proxy.Controller, err error) {
 	none := lib.ArtifactInfo{}
 	art = lib.GetArtifactInfo(ctx)
 	if art == none {
 		return none, nil, nil, errors.New("artifactinfo is not found").WithCode(errors.NotFoundCode)
 	}
 	ctl = proxy.ControllerInstance()
-	p, err = project.Ctl.GetByName(ctx, art.ProjectName, project.Metadata(false))
+	p, err = project.Ctl.GetByName(ctx, art.ProjectName, project.Metadata(withProjectMetadata))
 	return
 }
 
@@ -110,6 +113,10 @@ func ManifestMiddleware() func(http.Handler) http.Handler {
 		if err := handleManifest(w, r, next); err != nil {
 			if errors.IsNotFoundErr(err) {
 				httpLib.SendError(w, err)
+				return
+			}
+			if errors.IsRateLimitError(err) {
+				httpLib.SendError(w, tooManyRequestsError)
 				return
 			}
 			log.Errorf("failed to proxy manifest, fallback to local, request uri: %v, error: %v", r.RequestURI, err)
@@ -141,14 +148,14 @@ func defaultManifestURL(projectName string, name string, a lib.ArtifactInfo) str
 	return fmt.Sprintf("/v2/%s/library/%s/manifests/%s", projectName, name, a.Reference)
 }
 
-// defaultManifestURL return the real url for request with default project
+// defaultBlobURL return the real url for request with default project
 func defaultBlobURL(projectName string, name string, digest string) string {
 	return fmt.Sprintf("/v2/%s/library/%s/blobs/%s", projectName, name, digest)
 }
 
 func handleManifest(w http.ResponseWriter, r *http.Request, next http.Handler) error {
 	ctx := r.Context()
-	art, p, proxyCtl, err := preCheck(ctx)
+	art, p, proxyCtl, err := preCheck(ctx, true)
 	if err != nil {
 		return err
 	}
@@ -167,7 +174,7 @@ func handleManifest(w http.ResponseWriter, r *http.Request, next http.Handler) e
 		next.ServeHTTP(w, r)
 		return nil
 	}
-	remote, err := proxy.NewRemoteHelper(r.Context(), p.RegistryID)
+	remote, err := proxy.NewRemoteHelper(r.Context(), p.RegistryID, proxy.WithSpeed(p.ProxyCacheSpeed()))
 	if err != nil {
 		return err
 	}
@@ -194,16 +201,15 @@ func handleManifest(w http.ResponseWriter, r *http.Request, next http.Handler) e
 		return nil
 	}
 
-	log.Warningf("Artifact: %v:%v, digest:%v is not found in proxy cache, fetch it from remote repo", art.Repository, art.Tag, art.Digest)
-
 	log.Debugf("the tag is %v, digest is %v", art.Tag, art.Digest)
 	if r.Method == http.MethodHead {
 		err = proxyManifestHead(ctx, w, proxyCtl, p, art, remote)
 	} else if r.Method == http.MethodGet {
+		log.Warningf("Artifact: %v:%v, digest:%v is not found in proxy cache, fetch it from remote repo", art.Repository, art.Tag, art.Digest)
 		err = proxyManifestGet(ctx, w, proxyCtl, p, art, remote)
 	}
 	if err != nil {
-		if errors.IsNotFoundErr(err) {
+		if errors.IsNotFoundErr(err) || errors.IsRateLimitError(err) {
 			return err
 		}
 		log.Warningf("Proxy to remote failed, fallback to local repo, error: %v", err)
@@ -212,7 +218,7 @@ func handleManifest(w http.ResponseWriter, r *http.Request, next http.Handler) e
 	return nil
 }
 
-func proxyManifestGet(ctx context.Context, w http.ResponseWriter, ctl proxy.Controller, p *proModels.Project, art lib.ArtifactInfo, remote proxy.RemoteInterface) error {
+func proxyManifestGet(ctx context.Context, w http.ResponseWriter, ctl proxy.Controller, _ *proModels.Project, art lib.ArtifactInfo, remote proxy.RemoteInterface) error {
 	man, err := ctl.ProxyManifest(ctx, art, remote)
 	if err != nil {
 		return err
@@ -254,16 +260,21 @@ func setHeaders(w http.ResponseWriter, size int64, mediaType string, dig string)
 }
 
 // isProxySession check if current security context is proxy session
-func isProxySession(ctx context.Context) bool {
+func isProxySession(ctx context.Context, projectName string) bool {
 	sc, ok := security.FromContext(ctx)
 	if !ok {
 		log.Error("Failed to get security context")
 		return false
 	}
-	if sc.GetUsername() == proxycachesecret.ProxyCacheService {
+	username := sc.GetUsername()
+	if username == proxycachesecret.ProxyCacheService {
 		return true
 	}
-	return false
+	// it should include the auto generate SBOM session, so that it could generate SBOM accessory in proxy cache project
+	robotPrefix := config.RobotPrefix(ctx)
+	scannerPrefix := config.ScannerRobotPrefix(ctx)
+	prefix := fmt.Sprintf("%s%s+%s", robotPrefix, projectName, scannerPrefix)
+	return strings.HasPrefix(username, prefix)
 }
 
 // DisableBlobAndManifestUploadMiddleware disable push artifact to a proxy project with a non-proxy session
@@ -276,7 +287,7 @@ func DisableBlobAndManifestUploadMiddleware() func(http.Handler) http.Handler {
 			httpLib.SendError(w, err)
 			return
 		}
-		if p.IsProxy() && !isProxySession(ctx) {
+		if p.IsProxy() && !isProxySession(ctx, art.ProjectName) {
 			httpLib.SendError(w,
 				errors.DeniedError(
 					errors.Errorf("can not push artifact to a proxy project: %v", p.Name)))
@@ -286,7 +297,7 @@ func DisableBlobAndManifestUploadMiddleware() func(http.Handler) http.Handler {
 	})
 }
 
-func proxyManifestHead(ctx context.Context, w http.ResponseWriter, ctl proxy.Controller, p *proModels.Project, art lib.ArtifactInfo, remote proxy.RemoteInterface) error {
+func proxyManifestHead(ctx context.Context, w http.ResponseWriter, ctl proxy.Controller, _ *proModels.Project, art lib.ArtifactInfo, remote proxy.RemoteInterface) error {
 	exist, desc, err := ctl.HeadManifest(ctx, art, remote)
 	if err != nil {
 		return err

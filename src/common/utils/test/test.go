@@ -55,11 +55,11 @@ type Response struct {
 	StatusCode int
 	// Headers are the headers of the response
 	Headers map[string]string
-	// Boby is the body of the response
+	// Body is the body of the response
 	Body []byte
 }
 
-// Handler returns a handler function which handle requst according to
+// Handler returns a handler function which handle request according to
 // the response provided
 func Handler(resp *Response) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -82,7 +82,7 @@ func Handler(resp *Response) func(http.ResponseWriter, *http.Request) {
 	}
 }
 
-// NewServer creates a HTTP server for unit test
+// NewServer creates an HTTP server for unit test
 func NewServer(mappings ...*RequestHandlerMapping) *httptest.Server {
 	r := mux.NewRouter()
 
@@ -121,10 +121,7 @@ func GetUnitTestConfig() map[string]interface{} {
 		common.LDAPGroupAttributeName: "cn",
 		common.LDAPGroupSearchScope:   2,
 		common.LDAPGroupAdminDn:       "cn=harbor_users,ou=groups,dc=example,dc=com",
-		common.WithNotary:             "false",
-		common.WithChartMuseum:        "false",
 		common.SelfRegistration:       "true",
-		common.WithTrivy:              "true",
 		common.TokenServiceURL:        "http://core:8080/service/token",
 		common.RegistryURL:            fmt.Sprintf("http://%s:5000", ipAddress),
 		common.ReadOnly:               false,

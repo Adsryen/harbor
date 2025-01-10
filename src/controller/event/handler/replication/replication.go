@@ -23,8 +23,6 @@ import (
 	"github.com/goharbor/harbor/src/controller/project"
 	"github.com/goharbor/harbor/src/lib/log"
 	"github.com/goharbor/harbor/src/lib/orm"
-	"github.com/goharbor/harbor/src/pkg/label"
-	labmodel "github.com/goharbor/harbor/src/pkg/label/model"
 	"github.com/goharbor/harbor/src/pkg/reg/model"
 )
 
@@ -63,16 +61,6 @@ func (r *Handler) IsStateful() bool {
 	return false
 }
 
-// abstractLabelNames returns labels name.
-func abstractLabelNames(labels []*labmodel.Label) []string {
-	res := make([]string, 0, len(labels))
-	for _, lab := range labels {
-		res = append(res, lab.Name)
-	}
-
-	return res
-}
-
 func (r *Handler) handlePushArtifact(ctx context.Context, event *event.PushArtifactEvent) error {
 	art := event.Artifact
 	public := false
@@ -82,12 +70,6 @@ func (r *Handler) handlePushArtifact(ctx context.Context, event *event.PushArtif
 		return err
 	}
 	public = prj.IsPublic()
-	// list attached labels
-	labels, err := label.Mgr.ListByArtifact(ctx, art.ID)
-	if err != nil {
-		log.Errorf("failed to list artifact %d labels, error: %v", art.ID, err)
-		return err
-	}
 
 	e := &repevent.Event{
 		Type: repevent.EventTypeArtifactPush,
@@ -105,23 +87,17 @@ func (r *Handler) handlePushArtifact(ctx context.Context, event *event.PushArtif
 						Type:   art.Type,
 						Digest: art.Digest,
 						Tags:   event.Tags,
-						Labels: abstractLabelNames(labels),
+						Labels: event.Labels,
 					}},
 			},
 		},
+		Operator: event.Operator,
 	}
 	return repevent.Handle(ctx, e)
 }
 
 func (r *Handler) handleDeleteArtifact(ctx context.Context, event *event.DeleteArtifactEvent) error {
 	art := event.Artifact
-	// list attached labels
-	labels, err := label.Mgr.ListByArtifact(ctx, art.ID)
-	if err != nil {
-		log.Errorf("failed to list artifact %d labels, error: %v", art.ID, err)
-		return err
-	}
-
 	e := &repevent.Event{
 		Type: repevent.EventTypeArtifactDelete,
 		Resource: &model.Resource{
@@ -135,11 +111,12 @@ func (r *Handler) handleDeleteArtifact(ctx context.Context, event *event.DeleteA
 						Type:   art.Type,
 						Digest: art.Digest,
 						Tags:   event.Tags,
-						Labels: abstractLabelNames(labels),
+						Labels: event.Labels,
 					}},
 			},
 			Deleted: true,
 		},
+		Operator: event.Operator,
 	}
 	return repevent.Handle(ctx, e)
 }
@@ -153,12 +130,6 @@ func (r *Handler) handleCreateTag(ctx context.Context, event *event.CreateTagEve
 		return err
 	}
 	public = prj.IsPublic()
-	// list attached labels
-	labels, err := label.Mgr.ListByArtifact(ctx, art.ID)
-	if err != nil {
-		log.Errorf("failed to list artifact %d labels, error: %v", art.ID, err)
-		return err
-	}
 
 	e := &repevent.Event{
 		Type: repevent.EventTypeArtifactPush,
@@ -176,22 +147,17 @@ func (r *Handler) handleCreateTag(ctx context.Context, event *event.CreateTagEve
 						Type:   art.Type,
 						Digest: art.Digest,
 						Tags:   []string{event.Tag},
-						Labels: abstractLabelNames(labels),
+						Labels: event.Labels,
 					}},
 			},
 		},
+		Operator: event.Operator,
 	}
 	return repevent.Handle(ctx, e)
 }
 
 func (r *Handler) handleDeleteTag(ctx context.Context, event *event.DeleteTagEvent) error {
 	art := event.AttachedArtifact
-	// list attached labels
-	labels, err := label.Mgr.ListByArtifact(ctx, art.ID)
-	if err != nil {
-		log.Errorf("failed to list artifact %d labels, error: %v", art.ID, err)
-		return err
-	}
 
 	e := &repevent.Event{
 		Type: repevent.EventTypeTagDelete,
@@ -206,12 +172,13 @@ func (r *Handler) handleDeleteTag(ctx context.Context, event *event.DeleteTagEve
 						Type:   art.Type,
 						Digest: art.Digest,
 						Tags:   []string{event.Tag},
-						Labels: abstractLabelNames(labels),
+						Labels: event.Labels,
 					}},
 			},
 			Deleted:     true,
 			IsDeleteTag: true,
 		},
+		Operator: event.Operator,
 	}
 	return repevent.Handle(ctx, e)
 }

@@ -14,12 +14,11 @@
 import { Injectable } from '@angular/core';
 import {
     Router,
-    Resolve,
     RouterStateSnapshot,
     ActivatedRouteSnapshot,
 } from '@angular/router';
 import { forkJoin, Observable, of } from 'rxjs';
-import { map, catchError, mergeMap } from 'rxjs/operators';
+import { catchError, mergeMap } from 'rxjs/operators';
 import { Artifact } from '../../../../ng-swagger-gen/models/artifact';
 import { ArtifactService } from '../../../../ng-swagger-gen/services/artifact.service';
 import { Project } from '../../base/project/project';
@@ -29,7 +28,7 @@ import { dbEncodeURIComponent } from '../../shared/units/utils';
 @Injectable({
     providedIn: 'root',
 })
-export class ArtifactDetailRoutingResolverService implements Resolve<Artifact> {
+export class ArtifactDetailRoutingResolverService {
     constructor(
         private projectService: ProjectService,
         private artifactService: ArtifactService,
@@ -43,7 +42,7 @@ export class ArtifactDetailRoutingResolverService implements Resolve<Artifact> {
         const projectId: string = route.params['id'];
         const repositoryName: string = route.params['repo'];
         const artifactDigest: string = route.params['digest'];
-        return this.projectService.getProject(projectId).pipe(
+        return this.projectService.getProjectFromCache(projectId).pipe(
             mergeMap((project: Project) => {
                 return forkJoin([
                     this.artifactService.getArtifact({
@@ -52,6 +51,7 @@ export class ArtifactDetailRoutingResolverService implements Resolve<Artifact> {
                         projectName: project.name,
                         withLabel: true,
                         withScanOverview: true,
+                        withSbomOverview: true,
                         withTag: false,
                         withImmutableStatus: true,
                     }),

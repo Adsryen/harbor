@@ -1,3 +1,17 @@
+// Copyright Project Harbor Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package handler
 
 import (
@@ -44,7 +58,7 @@ type scanDataExportAPI struct {
 	userMgr           user.Manager
 }
 
-func (se *scanDataExportAPI) Prepare(ctx context.Context, operation string, params interface{}) middleware.Responder {
+func (se *scanDataExportAPI) Prepare(_ context.Context, _ string, _ interface{}) middleware.Responder {
 	return nil
 }
 
@@ -54,8 +68,10 @@ func (se *scanDataExportAPI) ExportScanData(ctx context.Context, params operatio
 		return se.SendError(ctx, err)
 	}
 
-	if err := se.RequireProjectAccess(ctx, params.Criteria.Projects[0], rbac.ActionCreate, rbac.ResourceExportCVE); err != nil {
-		return se.SendError(ctx, err)
+	for _, pid := range params.Criteria.Projects {
+		if err := se.RequireProjectAccess(ctx, pid, rbac.ActionCreate, rbac.ResourceExportCVE); err != nil {
+			return se.SendError(ctx, err)
+		}
 	}
 
 	scanDataExportJob := new(models.ScanDataExportJob)
@@ -74,8 +90,8 @@ func (se *scanDataExportAPI) ExportScanData(ctx context.Context, params operatio
 	}
 
 	if usr == nil {
-		error := &models.Error{Message: fmt.Sprintf("User : %s not found", secContext.GetUsername())}
-		errors := &models.Errors{Errors: []*models.Error{error}}
+		err := &models.Error{Message: fmt.Sprintf("User : %s not found", secContext.GetUsername())}
+		errors := &models.Errors{Errors: []*models.Error{err}}
 		return operation.NewExportScanDataForbidden().WithPayload(errors)
 	}
 
@@ -148,7 +164,7 @@ func (se *scanDataExportAPI) DownloadScanData(ctx context.Context, params operat
 	execution, err := se.scanDataExportCtl.GetExecution(ctx, params.ExecutionID)
 	if err != nil {
 		if notFound := orm.AsNotFoundError(err, "execution with id: %d not found", params.ExecutionID); notFound != nil {
-			return middleware.ResponderFunc(func(writer http.ResponseWriter, producer runtime.Producer) {
+			return middleware.ResponderFunc(func(writer http.ResponseWriter, _ runtime.Producer) {
 				writer.WriteHeader(http.StatusNotFound)
 			})
 		}
@@ -160,13 +176,6 @@ func (se *scanDataExportAPI) DownloadScanData(ctx context.Context, params operat
 		return se.SendError(ctx, err)
 	}
 
-	// check if the CSV artifact for the execution exists
-	if !execution.FilePresent {
-		return middleware.ResponderFunc(func(writer http.ResponseWriter, producer runtime.Producer) {
-			writer.WriteHeader(http.StatusNotFound)
-		})
-	}
-
 	// check if the execution being downloaded is owned by the current user
 	secContext, err := se.GetSecurityContext(ctx)
 	if err != nil {
@@ -174,8 +183,15 @@ func (se *scanDataExportAPI) DownloadScanData(ctx context.Context, params operat
 	}
 
 	if secContext.GetUsername() != execution.UserName {
-		return middleware.ResponderFunc(func(writer http.ResponseWriter, producer runtime.Producer) {
+		return middleware.ResponderFunc(func(writer http.ResponseWriter, _ runtime.Producer) {
 			writer.WriteHeader(http.StatusForbidden)
+		})
+	}
+
+	// check if the CSV artifact for the execution exists
+	if !execution.FilePresent {
+		return middleware.ResponderFunc(func(writer http.ResponseWriter, _ runtime.Producer) {
+			writer.WriteHeader(http.StatusNotFound)
 		})
 	}
 
@@ -186,7 +202,7 @@ func (se *scanDataExportAPI) DownloadScanData(ctx context.Context, params operat
 	}
 	log.Infof("reading data from file : %s", repositoryName)
 
-	return middleware.ResponderFunc(func(writer http.ResponseWriter, producer runtime.Producer) {
+	return middleware.ResponderFunc(func(writer http.ResponseWriter, _ runtime.Producer) {
 		defer se.cleanUpArtifact(ctx, repositoryName, execution.ExportDataDigest, params.ExecutionID, file)
 
 		writer.Header().Set("Content-Type", "text/csv")
@@ -200,7 +216,7 @@ func (se *scanDataExportAPI) DownloadScanData(ctx context.Context, params operat
 	})
 }
 
-func (se *scanDataExportAPI) GetScanDataExportExecutionList(ctx context.Context, params operation.GetScanDataExportExecutionListParams) middleware.Responder {
+func (se *scanDataExportAPI) GetScanDataExportExecutionList(ctx context.Context, _ operation.GetScanDataExportExecutionListParams) middleware.Responder {
 	if err := se.RequireAuthenticated(ctx); err != nil {
 		return se.SendError(ctx, err)
 	}
@@ -309,11 +325,11 @@ func (se *scanDataExportAPI) requireProjectsAccess(ctx context.Context, pids []i
 // validateScanExportParams validates scan data export request parameters by
 // following policies.
 // rules:
-//   1. check the scan data type
-//   2. the criteria should not be empty
-//   3. currently only the export of single project is open
-//   4. check the existence of project
-//   5. do not allow to input space in the repo/tag/cve_id (space will lead to misjudge for doublestar filter)
+//  1. check the scan data type
+//  2. the criteria should not be empty
+//  3. currently only the export of single project is open
+//  4. check the existence of project
+//  5. do not allow to input space in the repo/tag/cve_id (space will lead to misjudge for doublestar filter)
 func (se *scanDataExportAPI) validateScanExportParams(ctx context.Context, params operation.ExportScanDataParams) error {
 	// check if the MIME type for the export is the Generic vulnerability data
 	if params.XScanDataType != v1.MimeTypeGenericVulnerabilityReport {

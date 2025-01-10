@@ -1,12 +1,23 @@
+// Copyright Project Harbor Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package aliacr
 
 import (
-	"encoding/json"
-	"fmt"
+	"errors"
 	"net/http"
 	"time"
-
-	"github.com/aliyun/alibaba-cloud-sdk-go/services/cr"
 
 	"github.com/goharbor/harbor/src/common/http/modifier"
 	"github.com/goharbor/harbor/src/lib/log"
@@ -17,9 +28,7 @@ type Credential modifier.Modifier
 
 // Implements interface Credential
 type aliyunAuthCredential struct {
-	region              string
-	accessKey           string
-	secretKey           string
+	acrAPI              openapi
 	cacheToken          *registryTemporaryToken
 	cacheTokenExpiredAt time.Time
 }
@@ -32,11 +41,9 @@ type registryTemporaryToken struct {
 var _ Credential = &aliyunAuthCredential{}
 
 // NewAuth will get a temporary docker registry username and password via aliyun cr service API.
-func NewAuth(region, accessKey, secretKey string) Credential {
+func NewAuth(acrAPI openapi) Credential {
 	return &aliyunAuthCredential{
-		region:     region,
-		accessKey:  accessKey,
-		secretKey:  secretKey,
+		acrAPI:     acrAPI,
 		cacheToken: &registryTemporaryToken{},
 	}
 }
@@ -44,27 +51,16 @@ func NewAuth(region, accessKey, secretKey string) Credential {
 func (a *aliyunAuthCredential) Modify(r *http.Request) (err error) {
 	if !a.isCacheTokenValid() {
 		log.Debugf("[aliyunAuthCredential.Modify.updateToken]Host: %s\n", r.Host)
-		var client *cr.Client
-		client, err = cr.NewClientWithAccessKey(a.region, a.accessKey, a.secretKey)
-		if err != nil {
-			return
+		if a.acrAPI == nil {
+			return errors.New("acr api is nil")
 		}
-
-		var tokenRequest = cr.CreateGetAuthorizationTokenRequest()
-		var tokenResponse *cr.GetAuthorizationTokenResponse
-		tokenRequest.SetDomain(fmt.Sprintf(endpointTpl, a.region))
-		tokenResponse, err = client.GetAuthorizationToken(tokenRequest)
+		v, err := a.acrAPI.GetAuthorizationToken()
 		if err != nil {
-			return
+			return err
 		}
-		var v authorizationToken
-		err = json.Unmarshal(tokenResponse.GetHttpContentBytes(), &v)
-		if err != nil {
-			return
-		}
-		a.cacheTokenExpiredAt = v.Data.ExpireDate.ToTime()
-		a.cacheToken.user = v.Data.TempUserName
-		a.cacheToken.password = v.Data.AuthorizationToken
+		a.cacheTokenExpiredAt = v.expiresAt
+		a.cacheToken.user = v.user
+		a.cacheToken.password = v.password
 	} else {
 		log.Debug("[aliyunAuthCredential] USE CACHE TOKEN!!!")
 	}
