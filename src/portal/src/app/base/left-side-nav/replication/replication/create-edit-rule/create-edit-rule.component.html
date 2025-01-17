@@ -26,7 +26,7 @@
                             type="text"
                             id="ruleName"
                             size="35"
-                            pattern="^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
+                            pattern="^[a-z0-9]+(?:[._\-][a-z0-9]+)*$"
                             required
                             maxlength="255"
                             formControlName="name"
@@ -246,12 +246,7 @@
                                                 ?.values
                                         "
                                         value="{{ value }}">
-                                        {{ value
-                                        }}{{
-                                            value === 'chart'
-                                                ? ' (chartmuseum)'
-                                                : ''
-                                        }}
+                                        {{ value }}
                                     </option>
                                 </select>
                             </div>
@@ -277,69 +272,25 @@
                                         </option>
                                     </select>
                                 </div>
+
                                 <div
-                                    class="dropdown clr-select-wrapper"
-                                    formArrayName="value">
-                                    <clr-dropdown class="width-tag-label">
-                                        <div
-                                            class="width-100 label-text"
-                                            clrDropdownTrigger>
-                                            <div class="label-container">
-                                                <ng-template
-                                                    ngFor
-                                                    let-label
-                                                    [ngForOf]="
-                                                        filter.value.value
-                                                    "
-                                                    let-m="index">
-                                                    <hbr-label-piece
-                                                        class="label-piece"
-                                                        *ngIf="m < 1 && label"
-                                                        [hasIcon]="false"
-                                                        [label]="
-                                                            getLabel(label)
-                                                        "
-                                                        [labelWidth]="
-                                                            84
-                                                        "></hbr-label-piece>
-                                                </ng-template>
-                                                <span
-                                                    class="ellipsis color-white-dark"
-                                                    *ngIf="
-                                                        filter.value.value
-                                                            .length > 1
-                                                    "
-                                                    >···</span
-                                                >
-                                            </div>
-                                            <div
-                                                *ngFor="
-                                                    let label1 of filter.value
-                                                        .value;
-                                                    let k = index
-                                                "
-                                                hidden="true">
-                                                <input
-                                                    type="text"
-                                                    [formControlName]="k"
-                                                    #labelValue
-                                                    id="{{
-                                                        'label_' +
-                                                            supportedFilters[i]
-                                                                ?.type +
-                                                            '_' +
-                                                            label1
-                                                    }}"
-                                                    name="{{
-                                                        'label_' +
-                                                            supportedFilters[i]
-                                                                ?.type +
-                                                            '_' +
-                                                            label1
-                                                    }}"
-                                                    placeholder="select labels" />
-                                            </div>
-                                        </div>
+                                    class="clr-input-wrapper position-relative width-tag-label">
+                                    <input
+                                        class="clr-input width-tag-label label-input"
+                                        autocomplete="off"
+                                        type="text"
+                                        id="labelFilter"
+                                        [(ngModel)]="stringForLabelFilter"
+                                        [ngModelOptions]="{
+                                            standalone: true
+                                        }" />
+                                    <clr-dropdown>
+                                        <clr-icon
+                                            class="down"
+                                            clrDropdownTrigger
+                                            shape="caret"
+                                            dir="down">
+                                        </clr-icon>
                                         <clr-dropdown-menu
                                             [ngStyle]="{ 'max-height.px': 230 }"
                                             class="right-align"
@@ -351,11 +302,13 @@
                                                 *ngFor="
                                                     let value of supportedFilterLabels
                                                 "
-                                                (click)="stickLabel(value, i)">
+                                                (click)="
+                                                    stickLabel(value.name)
+                                                ">
                                                 <clr-icon
                                                     shape="check"
                                                     [style.visibility]="
-                                                        value.select
+                                                        isSelect(value.name)
                                                             ? 'visible'
                                                             : 'hidden'
                                                     "></clr-icon>
@@ -610,7 +563,6 @@
                                             | translate
                                     }}
                                 </div>
-                                <div>{{ 'REPLICATION.NOTE' | translate }}</div>
                             </clr-tooltip-content>
                         </clr-tooltip>
                     </div>
@@ -644,11 +596,15 @@
                             formGroupName="trigger_settings"
                             class="clr-form-control">
                             <div class="flex" [hidden]="isNotSchedule()">
-                                <label for="targetCron" class="required"
-                                    >Cron String</label
+                                <label
+                                    for="targetCron"
+                                    class="required sub-label"
+                                    >{{
+                                        'REPLICATION.CRON_STR' | translate
+                                    }}</label
                                 >
                                 <div
-                                    class="clr-control-container"
+                                    class="clr-control-container no-extend"
                                     [class.clr-error]="
                                         cronInputShouldShowError()
                                     ">
@@ -663,6 +619,19 @@
                                             pattern="^0\s(?!(\*\s)).+$"
                                             class="form-control cron-input clr-input"
                                             formControlName="cron" />
+                                        <clr-tooltip class="des-tooltip">
+                                            <clr-icon
+                                                clrTooltipTrigger
+                                                shape="info-circle"
+                                                size="24"></clr-icon>
+                                            <clr-tooltip-content
+                                                class="flatten"
+                                                clrPosition="top-left"
+                                                clrSize="lg"
+                                                *clrIfOpen>
+                                                <cron-tooltip></cron-tooltip>
+                                            </clr-tooltip-content>
+                                        </clr-tooltip>
                                     </div>
                                     <clr-control-error
                                         *ngIf="cronInputShouldShowError()">
@@ -672,24 +641,11 @@
                                         }}
                                     </clr-control-error>
                                 </div>
-                                <a
-                                    href="javascript:void(0)"
-                                    role="tooltip"
-                                    aria-haspopup="true"
-                                    class="tooltip tooltip-lg tooltip-top-left top-7 cron-tooltip">
-                                    <clr-icon
-                                        shape="info-circle"
-                                        class="info-tips-icon"
-                                        size="24"></clr-icon>
-                                    <div class="tooltip-content table-box">
-                                        <cron-tooltip></cron-tooltip>
-                                    </div>
-                                </a>
                             </div>
                         </div>
                     </div>
                     <div
-                        class="clr-checkbox-wrapper clr-form-control mt-0"
+                        class="clr-checkbox-wrapper mt-0"
                         [hidden]="isNotEventBased()">
                         <input
                             type="checkbox"
@@ -697,9 +653,30 @@
                             [checked]="false"
                             id="ruleDeletion"
                             formControlName="deletion" />
-                        <label for="ruleDeletion">{{
-                            'REPLICATION.DELETE_REMOTE_IMAGES' | translate
-                        }}</label>
+                        <label
+                            class="clr-control-label event-label"
+                            for="ruleDeletion"
+                            >{{
+                                'REPLICATION.DELETE_REMOTE_IMAGES' | translate
+                            }}
+                            <clr-tooltip>
+                                <clr-icon
+                                    clrTooltipTrigger
+                                    shape="info-circle"
+                                    size="24"></clr-icon>
+                                <clr-tooltip-content
+                                    clrPosition="top-left"
+                                    clrSize="lg"
+                                    *clrIfOpen>
+                                    <span>
+                                        {{
+                                            'REPLICATION.PUSH_BASED_ONLY'
+                                                | translate
+                                        }}
+                                    </span>
+                                </clr-tooltip-content>
+                            </clr-tooltip>
+                        </label>
                     </div>
                 </div>
             </div>
@@ -759,7 +736,9 @@
                                 clrSize="lg"
                                 *clrIfOpen>
                                 <span>{{
-                                    'REPLICATION.BANDWIDTH_TOOLTIP' | translate
+                                    'REPLICATION.BANDWIDTH_TOOLTIP'
+                                        | translate
+                                            : { max_job_workers: maxJobWorkers }
                                 }}</span>
                             </clr-tooltip-content>
                         </clr-tooltip>

@@ -1,3 +1,17 @@
+// Copyright Project Harbor Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package scandataexport
 
 import (
@@ -5,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/gocarina/gocsv"
@@ -47,7 +62,8 @@ func (sde *ScanDataExport) MaxCurrency() uint {
 // still less that the number declared by the method 'MaxFails'.
 //
 // Returns:
-//  true for retry and false for none-retry
+//
+//	true for retry and false for none-retry
 func (sde *ScanDataExport) ShouldRetry() bool {
 	return true
 }
@@ -55,7 +71,7 @@ func (sde *ScanDataExport) ShouldRetry() bool {
 // Validate Indicate whether the parameters of job are valid.
 // Return:
 // error if parameters are not valid. NOTES: If no parameters needed, directly return nil.
-func (sde *ScanDataExport) Validate(params job.Parameters) error {
+func (sde *ScanDataExport) Validate(_ job.Parameters) error {
 	return nil
 }
 
@@ -66,8 +82,8 @@ func (sde *ScanDataExport) Validate(params job.Parameters) error {
 // params map[string]interface{} : parameters with key-pair style for the job execution.
 //
 // Returns:
-//  error if failed to run. NOTES: If job is stopped or cancelled, a specified error should be returned
 //
+//	error if failed to run. NOTES: If job is stopped or cancelled, a specified error should be returned
 func (sde *ScanDataExport) Run(ctx job.Context, params job.Parameters) error {
 	if _, ok := params[export.JobModeKey]; !ok {
 		return errors.Errorf("no mode specified for scan data export execution")
@@ -77,7 +93,7 @@ func (sde *ScanDataExport) Run(ctx job.Context, params job.Parameters) error {
 	logger := ctx.GetLogger()
 	logger.Infof("Scan data export job started in mode : %v", mode)
 	sde.init()
-	fileName := fmt.Sprintf("%s/scandata_export_%v.csv", sde.scanDataExportDirPath, params["JobId"])
+	fileName := fmt.Sprintf("%s/scandata_export_%s.csv", sde.scanDataExportDirPath, params[export.JobID])
 
 	// ensure that CSV files are cleared post the completion of the Run.
 	defer sde.cleanupCsvFile(ctx, fileName, params)
@@ -92,12 +108,12 @@ func (sde *ScanDataExport) Run(ctx job.Context, params job.Parameters) error {
 		logger.Errorf("Error when calculating checksum for generated file: %v", err)
 		return err
 	}
-	logger.Infof("Export Job Id = %v, FileName = %s, Hash = %v", params["JobId"], fileName, hash)
+	logger.Infof("Export Job Id = %s, FileName = %s, Hash = %v", params[export.JobID], fileName, hash)
 
 	csvFile, err := os.OpenFile(fileName, os.O_RDONLY, os.ModePerm)
 	if err != nil {
 		logger.Errorf(
-			"Export Job Id = %v. Error when moving report file %s to persistent storage: %v", params["JobId"], fileName, err)
+			"Export Job Id = %s. Error when moving report file %s to persistent storage: %v", params[export.JobID], fileName, err)
 		return err
 	}
 	baseFileName := filepath.Base(fileName)
@@ -108,32 +124,33 @@ func (sde *ScanDataExport) Run(ctx job.Context, params job.Parameters) error {
 		logger.Errorf("Error when fetching file size: %v", err)
 		return err
 	}
-	logger.Infof("Export Job Id = %v. CSV file size: %d", params["JobId"], stat.Size())
+	logger.Infof("Export Job Id = %s. CSV file size: %d", params[export.JobID], stat.Size())
+	// earlier return and update status message if the file size is 0, unnecessary to push a empty system artifact.
+	if stat.Size() == 0 {
+		extra := map[string]interface{}{
+			export.StatusMessageAttribute: "No vulnerabilities found or matched",
+		}
+		updateErr := sde.updateExecAttributes(ctx, params, extra)
+		if updateErr != nil {
+			logger.Errorf("Export Job Id = %s. Error when updating the exec extra attributes 'status_message' to 'No vulnerabilities found or matched': %v", params[export.JobID], updateErr)
+		}
+
+		logger.Infof("Export Job Id = %s. Exported CSV file is empty, skip to push system artifact, exit job", params[export.JobID])
+		return nil
+	}
+
 	csvExportArtifactRecord := model.SystemArtifact{Repository: repositoryName, Digest: hash.String(), Size: stat.Size(), Type: "ScanData_CSV", Vendor: strings.ToLower(export.Vendor)}
 	artID, err := sde.sysArtifactMgr.Create(ctx.SystemContext(), &csvExportArtifactRecord, csvFile)
 	if err != nil {
 		logger.Errorf(
-			"Export Job Id = %v. Error when persisting report file %s to persistent storage: %v", params["JobId"], fileName, err)
-		// NOTICE: this is a tentative solution to resolve error to push empty blob to S3 storage driver,
-		// should unify the behaviour for different drivers.
-		// Temporary set the status message to extra attributes, then the API handler will fetch it and combined to response for better experience.
-		if stat.Size() == 0 {
-			extra := map[string]interface{}{
-				"status_message": "No vulnerabilities found or matched",
-			}
-			updateErr := sde.updateExecAttributes(ctx, params, extra)
-			if updateErr != nil {
-				logger.Errorf("Export Job Id = %v. Error when updating the exec extra attributes 'status_message' to 'No vulnerabilities found or matched': %v", params["JobId"], updateErr)
-			}
-		}
-
+			"Export Job Id = %s. Error when persisting report file %s to persistent storage: %v", params[export.JobID], fileName, err)
 		return err
 	}
 
-	logger.Infof("Export Job Id = %v. Created system artifact: %v for report file %s to persistent storage: %v", params["JobId"], artID, fileName, err)
+	logger.Infof("Export Job Id = %s. Created system artifact: %v for report file %s to persistent storage: %v", params[export.JobID], artID, fileName, err)
 	err = sde.updateExecAttributes(ctx, params, map[string]interface{}{export.DigestKey: hash.String()})
 	if err != nil {
-		logger.Errorf("Export Job Id = %v. Error when updating execution record : %v", params["JobId"], err)
+		logger.Errorf("Export Job Id = %s. Error when updating execution record : %v", params[export.JobID], err)
 		return err
 	}
 	logger.Info("Scan data export job completed")
@@ -142,11 +159,16 @@ func (sde *ScanDataExport) Run(ctx job.Context, params job.Parameters) error {
 }
 
 func (sde *ScanDataExport) updateExecAttributes(ctx job.Context, params job.Parameters, attrs map[string]interface{}) error {
-	execID := int64(params["JobId"].(float64))
-	exec, err := sde.execMgr.Get(ctx.SystemContext(), execID)
 	logger := ctx.GetLogger()
+	execID, err := strconv.ParseInt(params[export.JobID].(string), 10, 64)
 	if err != nil {
-		logger.Errorf("Export Job Id = %v. Error when fetching execution record for update : %v", params["JobId"], err)
+		logger.Errorf("Export Job Id = %s. Error when parse execution id from params: %v", params[export.JobID], err)
+		return err
+	}
+
+	exec, err := sde.execMgr.Get(ctx.SystemContext(), execID)
+	if err != nil {
+		logger.Errorf("Export Job Id = %s. Error when fetching execution record for update : %v", params[export.JobID], err)
 		return err
 	}
 	// copy old extra
@@ -158,55 +180,45 @@ func (sde *ScanDataExport) updateExecAttributes(ctx job.Context, params job.Para
 }
 
 func (sde *ScanDataExport) writeCsvFile(ctx job.Context, params job.Parameters, fileName string) error {
-	csvFile, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE|os.O_APPEND, os.ModePerm)
-	if err != nil {
-		return err
-	}
-	systemContext := ctx.SystemContext()
-	defer csvFile.Close()
-
 	logger := ctx.GetLogger()
+	csvFile, err := os.OpenFile(fileName, os.O_WRONLY|os.O_CREATE|os.O_APPEND, os.ModePerm)
 	if err != nil {
 		logger.Errorf("Failed to create CSV export file %s. Error : %v", fileName, err)
 		return err
 	}
+	defer csvFile.Close()
+
 	logger.Infof("Created CSV export file %s", csvFile.Name())
 
+	systemContext := ctx.SystemContext()
 	var exportParams export.Params
 	var artIDGroups [][]int64
 
-	if criteira, ok := params["Request"]; ok {
-		logger.Infof("Request for export : %v", criteira)
+	if criteria, ok := params[export.JobRequest]; ok {
+		logger.Infof("Request for export : %v", criteria)
 		filterCriteria, err := sde.extractCriteria(params)
 		if err != nil {
 			return err
 		}
 
-		// check if any projects are specified. If not then fetch all the projects
-		// of which the current user is a project admin.
-		projectIds, err := sde.filterProcessor.ProcessProjectFilter(systemContext, filterCriteria.UserName, filterCriteria.Projects)
-
-		if err != nil {
-			return err
-		}
-
-		if len(projectIds) == 0 {
+		projectIDs := filterCriteria.Projects
+		if len(projectIDs) == 0 {
 			return nil
 		}
 
 		// extract the repository ids if any repositories have been specified
-		repoIds, err := sde.filterProcessor.ProcessRepositoryFilter(systemContext, filterCriteria.Repositories, projectIds)
+		repoIDs, err := sde.filterProcessor.ProcessRepositoryFilter(systemContext, filterCriteria.Repositories, projectIDs)
 		if err != nil {
 			return err
 		}
 
-		if len(repoIds) == 0 {
+		if len(repoIDs) == 0 {
 			logger.Infof("No repositories found with specified names: %v", filterCriteria.Repositories)
 			return nil
 		}
 
 		// filter artifacts by tags
-		arts, err := sde.filterProcessor.ProcessTagFilter(systemContext, filterCriteria.Tags, repoIds)
+		arts, err := sde.filterProcessor.ProcessTagFilter(systemContext, filterCriteria.Tags, repoIDs)
 		if err != nil {
 			return err
 		}
@@ -260,7 +272,7 @@ func (sde *ScanDataExport) writeCsvFile(ctx job.Context, params job.Parameters, 
 				logger.Infof("No more data to fetch. Exiting...")
 				break
 			}
-			logger.Infof("Export Group Id = %d, Job Id = %v, Page Number = %d, Page Size = %d Num Records = %d", groupID, params["JobId"], exportParams.PageNumber, exportParams.PageSize, len(data))
+			logger.Infof("Export Group Id = %d, Job Id = %s, Page Number = %d, Page Size = %d Num Records = %d", groupID, params[export.JobID], exportParams.PageNumber, exportParams.PageSize, len(data))
 
 			// for the first page write the CSV with the headers
 			if exportParams.PageNumber == 1 && groupID == 0 {
@@ -283,9 +295,9 @@ func (sde *ScanDataExport) writeCsvFile(ctx job.Context, params job.Parameters, 
 }
 
 func (sde *ScanDataExport) extractCriteria(params job.Parameters) (*export.Request, error) {
-	filterMap, ok := params["Request"].(map[string]interface{})
+	filterMap, ok := params[export.JobRequest].(map[string]interface{})
 	if !ok {
-		return nil, errors.Errorf("malformed criteria '%v'", params["Request"])
+		return nil, errors.Errorf("malformed criteria '%v'", params[export.JobRequest])
 	}
 	jsonData, err := json.Marshal(filterMap)
 	if err != nil {
@@ -354,12 +366,12 @@ func (sde *ScanDataExport) init() {
 func (sde *ScanDataExport) cleanupCsvFile(ctx job.Context, fileName string, params job.Parameters) {
 	logger := ctx.GetLogger()
 	if _, err := os.Stat(fileName); os.IsNotExist(err) {
-		logger.Infof("Export Job Id = %v, CSV Export File = %s does not exist. Nothing to do", params["JobId"], fileName)
+		logger.Infof("Export Job Id = %s, CSV Export File = %s does not exist. Nothing to do", params[export.JobID], fileName)
 		return
 	}
 	err := os.Remove(fileName)
 	if err != nil {
-		logger.Errorf("Export Job Id = %d, CSV Export File = %s could not deleted. Error = %v", params["JobId"], fileName, err)
+		logger.Errorf("Export Job Id = %s, CSV Export File = %s could not deleted. Error = %v", params[export.JobID], fileName, err)
 		return
 	}
 }

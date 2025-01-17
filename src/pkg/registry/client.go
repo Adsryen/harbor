@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -78,12 +77,14 @@ var (
 func init() {
 	registryHTTPClientTimeout = DefaultHTTPClientTimeout
 	// override it if read from environment variable, in minutes
-	timeout, err := strconv.ParseInt(os.Getenv("REGISTRY_HTTP_CLIENT_TIMEOUT"), 10, 64)
-	if err != nil {
-		log.Errorf("Failed to parse REGISTRY_HTTP_CLIENT_TIMEOUT: %v, use default value: %v", err, DefaultHTTPClientTimeout)
-	} else {
-		if timeout > 0 {
-			registryHTTPClientTimeout = time.Duration(timeout) * time.Minute
+	if env := os.Getenv("REGISTRY_HTTP_CLIENT_TIMEOUT"); len(env) > 0 {
+		timeout, err := strconv.ParseInt(env, 10, 64)
+		if err != nil {
+			log.Errorf("Failed to parse REGISTRY_HTTP_CLIENT_TIMEOUT: %v, use default value: %v", err, DefaultHTTPClientTimeout)
+		} else {
+			if timeout > 0 {
+				registryHTTPClientTimeout = time.Duration(timeout) * time.Minute
+			}
 		}
 	}
 }
@@ -201,7 +202,7 @@ func (c *client) catalog(url string) ([]string, string, error) {
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, "", err
 	}
@@ -248,7 +249,7 @@ func (c *client) listTags(url string) ([]string, string, error) {
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, "", err
 	}
@@ -280,8 +281,8 @@ func (c *client) ManifestExist(repository, reference string) (bool, *distributio
 	dig := resp.Header.Get("Docker-Content-Digest")
 	contentType := resp.Header.Get("Content-Type")
 	contentLen := resp.Header.Get("Content-Length")
-	len, _ := strconv.Atoi(contentLen)
-	return true, &distribution.Descriptor{Digest: digest.Digest(dig), MediaType: contentType, Size: int64(len)}, nil
+	lenth, _ := strconv.Atoi(contentLen)
+	return true, &distribution.Descriptor{Digest: digest.Digest(dig), MediaType: contentType, Size: int64(lenth)}, nil
 }
 
 func (c *client) PullManifest(repository, reference string, acceptedMediaTypes ...string) (
@@ -301,7 +302,7 @@ func (c *client) PullManifest(repository, reference string, acceptedMediaTypes .
 		return nil, "", err
 	}
 	defer resp.Body.Close()
-	payload, err := ioutil.ReadAll(resp.Body)
+	payload, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, "", err
 	}
@@ -339,7 +340,7 @@ func (c *client) DeleteManifest(repository, reference string) error {
 		}
 		if !exist {
 			return errors.New(nil).WithCode(errors.NotFoundCode).
-				WithMessage("%s:%s not found", repository, reference)
+				WithMessagef("%s:%s not found", repository, reference)
 		}
 		reference = string(desc.Digest)
 	}
@@ -398,7 +399,7 @@ func (c *client) PullBlob(repository, digest string) (int64, io.ReadCloser, erro
 }
 
 // PullBlobChunk pulls the specified blob, but by chunked, refer to https://github.com/opencontainers/distribution-spec/blob/main/spec.md#pull for more details.
-func (c *client) PullBlobChunk(repository, digest string, blobSize int64, start, end int64) (int64, io.ReadCloser, error) {
+func (c *client) PullBlobChunk(repository, digest string, _ int64, start, end int64) (int64, io.ReadCloser, error) {
 	req, err := http.NewRequest(http.MethodGet, buildBlobURL(c.url, repository, digest), nil)
 	if err != nil {
 		return 0, nil, err
@@ -664,11 +665,10 @@ func (c *client) do(req *http.Request) (*http.Response, error) {
 	}
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return nil, err
 		}
-		message := fmt.Sprintf("http status code: %d, body: %s", resp.StatusCode, string(body))
 		code := errors.GeneralCode
 		switch resp.StatusCode {
 		case http.StatusUnauthorized:
@@ -677,9 +677,11 @@ func (c *client) do(req *http.Request) (*http.Response, error) {
 			code = errors.ForbiddenCode
 		case http.StatusNotFound:
 			code = errors.NotFoundCode
+		case http.StatusTooManyRequests:
+			code = errors.RateLimitCode
 		}
 		return nil, errors.New(nil).WithCode(code).
-			WithMessage(message)
+			WithMessagef("http status code: %d, body: %s", resp.StatusCode, string(body))
 	}
 	return resp, nil
 }

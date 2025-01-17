@@ -37,6 +37,8 @@ const (
 	proScannerMetaKey = "projectScanner"
 	statusUnhealthy   = "unhealthy"
 	statusHealthy     = "healthy"
+	// RetrieveCapFailMsg the message indicate failed to retrieve the scanner capabilities
+	RetrieveCapFailMsg = "failed to retrieve scanner capabilities, error %v"
 )
 
 // DefaultController is a singleton api controller for plug scanners
@@ -79,7 +81,12 @@ func (bc *basicController) ListRegistrations(ctx context.Context, query *q.Query
 	if err != nil {
 		return nil, errors.Wrap(err, "api controller: list registrations")
 	}
-
+	for _, r := range l {
+		if err := bc.RetrieveCap(ctx, r); err != nil {
+			log.Warningf(RetrieveCapFailMsg, err)
+			return l, nil
+		}
+	}
 	return l, nil
 }
 
@@ -91,7 +98,7 @@ func (bc *basicController) GetTotalOfRegistrations(ctx context.Context, query *q
 // CreateRegistration ...
 func (bc *basicController) CreateRegistration(ctx context.Context, registration *scanner.Registration) (string, error) {
 	if isReservedName(registration.Name) {
-		return "", errors.BadRequestError(nil).WithMessage(`name "%s" is reserved, please try a different name`, registration.Name)
+		return "", errors.BadRequestError(nil).WithMessagef(`name "%s" is reserved, please try a different name`, registration.Name)
 	}
 
 	// Check if the registration is available
@@ -122,8 +129,24 @@ func (bc *basicController) GetRegistration(ctx context.Context, registrationUUID
 	if err != nil {
 		return nil, errors.Wrap(err, "api controller: get registration")
 	}
-
+	if r == nil {
+		return nil, nil
+	}
+	if err := bc.RetrieveCap(ctx, r); err != nil {
+		log.Warningf(RetrieveCapFailMsg, err)
+		return r, nil
+	}
 	return r, nil
+}
+
+func (bc *basicController) RetrieveCap(ctx context.Context, r *scanner.Registration) error {
+	mt, err := bc.Ping(ctx, r)
+	if err != nil {
+		logger.Errorf("Get registration error: %s", err)
+		return err
+	}
+	r.Capabilities = mt.ConvertCapability()
+	return nil
 }
 
 // RegistrationExists ...
@@ -145,7 +168,7 @@ func (bc *basicController) UpdateRegistration(ctx context.Context, registration 
 	}
 
 	if isReservedName(registration.Name) {
-		return errors.BadRequestError(nil).WithMessage(`name "%s" is reserved, please try a different name`, registration.Name)
+		return errors.BadRequestError(nil).WithMessagef(`name "%s" is reserved, please try a different name`, registration.Name)
 	}
 
 	return bc.manager.Update(ctx, registration)
@@ -320,7 +343,7 @@ func (bc *basicController) GetMetadata(ctx context.Context, registrationUUID str
 	}
 
 	if r == nil {
-		return nil, errors.NotFoundError(nil).WithMessage("registration %s not found", registrationUUID)
+		return nil, errors.NotFoundError(nil).WithMessagef("registration %s not found", registrationUUID)
 	}
 
 	return bc.Ping(ctx, r)
@@ -379,7 +402,7 @@ type MetadataResult struct {
 func (m *MetadataResult) Unpack() (*v1.ScannerAdapterMetadata, error) {
 	var err error
 	if m.Error != "" {
-		err = fmt.Errorf(m.Error)
+		err = errors.New(nil).WithMessage(m.Error)
 	}
 
 	return m.Metadata, err

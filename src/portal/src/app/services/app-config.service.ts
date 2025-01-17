@@ -37,7 +37,17 @@ export class AppConfigService {
     // Store the application configuration
     configurations: AppConfig = new AppConfig();
 
+    private _bannerMessageClosed: boolean = false;
+
     constructor(private http: HttpClient, private cookie: CookieService) {}
+
+    setBannerMessageClosed(v: boolean) {
+        this._bannerMessageClosed = v;
+    }
+
+    getBannerMessageClosed(): boolean {
+        return this._bannerMessageClosed;
+    }
 
     public load(): Observable<AppConfig> {
         return this.http.get(systemInfoEndpoint, HTTP_GET_OPTIONS).pipe(
@@ -60,14 +70,6 @@ export class AppConfigService {
 
     public getConfig(): AppConfig {
         return this.configurations;
-    }
-
-    public isIntegrationMode(): boolean {
-        return (
-            this.configurations &&
-            this.configurations.with_admiral &&
-            this.configurations.admiral_endpoint.trim() !== ''
-        );
     }
 
     public isLdapMode(): boolean {

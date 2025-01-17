@@ -15,7 +15,7 @@
 package chart
 
 import (
-	"io/ioutil"
+	"io"
 	"strings"
 	"testing"
 
@@ -64,12 +64,12 @@ type processorTestSuite struct {
 	suite.Suite
 	processor *processor
 	regCli    *registry.Client
-	chartOptr *chart.FakeOpertaor
+	chartOptr *chart.Operator
 }
 
 func (p *processorTestSuite) SetupTest() {
 	p.regCli = &registry.Client{}
-	p.chartOptr = &chart.FakeOpertaor{}
+	p.chartOptr = &chart.Operator{}
 	p.processor = &processor{
 		chartOperator: p.chartOptr,
 	}
@@ -105,8 +105,8 @@ func (p *processorTestSuite) TestAbstractAddition() {
 	manifest, _, err := distribution.UnmarshalManifest(v1.MediaTypeImageManifest, []byte(chartManifest))
 	p.Require().Nil(err)
 	p.regCli.On("PullManifest", mock.Anything, mock.Anything).Return(manifest, "", nil)
-	p.regCli.On("PullBlob", mock.Anything, mock.Anything).Return(int64(0), ioutil.NopCloser(strings.NewReader(chartYaml)), nil)
-	p.chartOptr.On("GetDetails").Return(chartDetails, nil)
+	p.regCli.On("PullBlob", mock.Anything, mock.Anything).Return(int64(0), io.NopCloser(strings.NewReader(chartYaml)), nil)
+	p.chartOptr.On("GetDetails", mock.Anything).Return(chartDetails, nil)
 
 	// values.yaml
 	addition, err := p.processor.AbstractAddition(nil, artifact, AdditionTypeValues)

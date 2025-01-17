@@ -13,11 +13,9 @@
 // limitations under the License.
 import { Injectable } from '@angular/core';
 import {
-    CanActivate,
     Router,
     ActivatedRouteSnapshot,
     RouterStateSnapshot,
-    CanActivateChild,
     NavigationExtras,
 } from '@angular/router';
 import { SessionService } from '../services/session.service';
@@ -25,13 +23,13 @@ import { AppConfigService } from '../../services/app-config.service';
 import { MessageHandlerService } from '../services/message-handler.service';
 import { SearchTriggerService } from '../components/global-search/search-trigger.service';
 import { Observable } from 'rxjs';
-import { CommonRoutes } from '../entities/shared.const';
 import { UN_LOGGED_PARAM, YES } from '../../account/sign-in/sign-in.service';
+import { CommonRoutes, CONFIG_AUTH_MODE } from '../entities/shared.const';
 
 @Injectable({
     providedIn: 'root',
 })
-export class AuthCheckGuard implements CanActivate, CanActivateChild {
+export class AuthCheckGuard {
     constructor(
         private authService: SessionService,
         private router: Router,
@@ -46,13 +44,6 @@ export class AuthCheckGuard implements CanActivate, CanActivateChild {
     ): Observable<boolean> | boolean {
         // When routing change, clear
         this.msgHandler.clear();
-        if (
-            this.appConfigService.getConfig().read_only &&
-            this.appConfigService.getConfig().read_only.toString() === 'true'
-        ) {
-            this.msgHandler.handleReadOnly();
-        }
-
         this.searchTrigger.closeSearch(true);
         return new Observable(observer => {
             // if the url has the queryParam `publicAndNotLogged=yes`, then skip auth check
@@ -76,6 +67,18 @@ export class AuthCheckGuard implements CanActivate, CanActivateChild {
                             let navigatorExtra: NavigationExtras = {
                                 queryParams: { redirect_url: state.url },
                             };
+                            // if primary auth mode enabled, skip the first step
+                            if (
+                                this.appConfigService.getConfig().auth_mode ==
+                                    CONFIG_AUTH_MODE.OIDC_AUTH &&
+                                this.appConfigService.getConfig()
+                                    .primary_auth_mode
+                            ) {
+                                window.location.href =
+                                    '/c/oidc/login?redirect_url=' +
+                                    encodeURI(state.url);
+                                return observer.next(false);
+                            }
                             this.router.navigate(
                                 [CommonRoutes.EMBEDDED_SIGN_IN],
                                 navigatorExtra

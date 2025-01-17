@@ -113,6 +113,326 @@ describe('CreateEditEndpointComponent (inline template)', () => {
                         key: 'me-east-1',
                         value: 'https://registry.me-east-1.aliyuncs.com',
                     },
+                    {
+                        key: 'cn-hangzhou-vpc',
+                        value: 'https://registry-vpc.cn-hangzhou.aliyuncs.com',
+                    },
+                    {
+                        key: 'cn-shanghai-vpc',
+                        value: 'https://registry-vpc.cn-shanghai.aliyuncs.com',
+                    },
+                    {
+                        key: 'cn-qingdao-vpc',
+                        value: 'https://registry-vpc.cn-qingdao.aliyuncs.com',
+                    },
+                    {
+                        key: 'cn-beijing-vpc',
+                        value: 'https://registry-vpc.cn-beijing.aliyuncs.com',
+                    },
+                    {
+                        key: 'cn-zhangjiakou-vpc',
+                        value: 'https://registry-vpc.cn-zhangjiakou.aliyuncs.com',
+                    },
+                    {
+                        key: 'cn-huhehaote-vpc',
+                        value: 'https://registry-vpc.cn-huhehaote.aliyuncs.com',
+                    },
+                    {
+                        key: 'cn-shenzhen-vpc',
+                        value: 'https://registry-vpc.cn-shenzhen.aliyuncs.com',
+                    },
+                    {
+                        key: 'cn-chengdu-vpc',
+                        value: 'https://registry-vpc.cn-chengdu.aliyuncs.com',
+                    },
+                    {
+                        key: 'cn-hongkong-vpc',
+                        value: 'https://registry-vpc.cn-hongkong.aliyuncs.com',
+                    },
+                    {
+                        key: 'ap-southeast-1-vpc',
+                        value: 'https://registry-vpc.ap-southeast-1.aliyuncs.com',
+                    },
+                    {
+                        key: 'ap-southeast-2-vpc',
+                        value: 'https://registry-vpc.ap-southeast-2.aliyuncs.com',
+                    },
+                    {
+                        key: 'ap-southeast-3-vpc',
+                        value: 'https://registry-vpc.ap-southeast-3.aliyuncs.com',
+                    },
+                    {
+                        key: 'ap-southeast-5-vpc',
+                        value: 'https://registry-vpc.ap-southeast-5.aliyuncs.com',
+                    },
+                    {
+                        key: 'ap-northeast-1-vpc',
+                        value: 'https://registry-vpc.ap-northeast-1.aliyuncs.com',
+                    },
+                    {
+                        key: 'ap-south-1-vpc',
+                        value: 'https://registry-vpc.ap-south-1.aliyuncs.com',
+                    },
+                    {
+                        key: 'eu-central-1-vpc',
+                        value: 'https://registry-vpc.eu-central-1.aliyuncs.com',
+                    },
+                    {
+                        key: 'eu-west-1-vpc',
+                        value: 'https://registry-vpc.eu-west-1.aliyuncs.com',
+                    },
+                    {
+                        key: 'us-west-1-vpc',
+                        value: 'https://registry-vpc.us-west-1.aliyuncs.com',
+                    },
+                    {
+                        key: 'us-east-1-vpc',
+                        value: 'https://registry-vpc.us-east-1.aliyuncs.com',
+                    },
+                    {
+                        key: 'me-east-1-vpc',
+                        value: 'https://registry-vpc.me-east-1.aliyuncs.com',
+                    },
+                    {
+                        key: 'cn-hangzhou-internal',
+                        value: 'https://registry-internal.cn-hangzhou.aliyuncs.com',
+                    },
+                    {
+                        key: 'cn-shanghai-internal',
+                        value: 'https://registry-internal.cn-shanghai.aliyuncs.com',
+                    },
+                    {
+                        key: 'cn-qingdao-internal',
+                        value: 'https://registry-internal.cn-qingdao.aliyuncs.com',
+                    },
+                    {
+                        key: 'cn-beijing-internal',
+                        value: 'https://registry-internal.cn-beijing.aliyuncs.com',
+                    },
+                    {
+                        key: 'cn-zhangjiakou-internal',
+                        value: 'https://registry-internal.cn-zhangjiakou.aliyuncs.com',
+                    },
+                    {
+                        key: 'cn-huhehaote-internal',
+                        value: 'https://registry-internal.cn-huhehaote.aliyuncs.com',
+                    },
+                    {
+                        key: 'cn-shenzhen-internal',
+                        value: 'https://registry-internal.cn-shenzhen.aliyuncs.com',
+                    },
+                    {
+                        key: 'cn-chengdu-internal',
+                        value: 'https://registry-internal.cn-chengdu.aliyuncs.com',
+                    },
+                    {
+                        key: 'cn-hongkong-internal',
+                        value: 'https://registry-internal.cn-hongkong.aliyuncs.com',
+                    },
+                    {
+                        key: 'ap-southeast-1-internal',
+                        value: 'https://registry-internal.ap-southeast-1.aliyuncs.com',
+                    },
+                    {
+                        key: 'ap-southeast-2-internal',
+                        value: 'https://registry-internal.ap-southeast-2.aliyuncs.com',
+                    },
+                    {
+                        key: 'ap-southeast-3-internal',
+                        value: 'https://registry-internal.ap-southeast-3.aliyuncs.com',
+                    },
+                    {
+                        key: 'ap-southeast-5-internal',
+                        value: 'https://registry-internal.ap-southeast-5.aliyuncs.com',
+                    },
+                    {
+                        key: 'ap-northeast-1-internal',
+                        value: 'https://registry-internal.ap-northeast-1.aliyuncs.com',
+                    },
+                    {
+                        key: 'ap-south-1-internal',
+                        value: 'https://registry-internal.ap-south-1.aliyuncs.com',
+                    },
+                    {
+                        key: 'eu-central-1-internal',
+                        value: 'https://registry-internal.eu-central-1.aliyuncs.com',
+                    },
+                    {
+                        key: 'eu-west-1-internal',
+                        value: 'https://registry-internal.eu-west-1.aliyuncs.com',
+                    },
+                    {
+                        key: 'us-west-1-internal',
+                        value: 'https://registry-internal.us-west-1.aliyuncs.com',
+                    },
+                    {
+                        key: 'us-east-1-internal',
+                        value: 'https://registry-internal.us-east-1.aliyuncs.com',
+                    },
+                    {
+                        key: 'me-east-1-internal',
+                        value: 'https://registry-internal.me-east-1.aliyuncs.com',
+                    },
+                    {
+                        key: 'cn-hangzhou-ee-vpc',
+                        value: `https://instanceName-registry-vpc.cn-hangzhou.cr.aliyuncs.com`,
+                    },
+                    {
+                        key: 'cn-shanghai-ee-vpc',
+                        value: 'https://instanceName-registry-vpc.cn-shanghai.cr.aliyuncs.com',
+                    },
+                    {
+                        key: 'cn-qingdao-ee-vpc',
+                        value: 'https://instanceName-registry-vpc.cn-qingdao.cr.aliyuncs.com',
+                    },
+                    {
+                        key: 'cn-beijing-ee-vpc',
+                        value: 'https://instanceName-registry-vpc.cn-beijing.cr.aliyuncs.com',
+                    },
+                    {
+                        key: 'cn-zhangjiakou-ee-vpc',
+                        value: 'https://instanceName-registry-vpc.cn-zhangjiakou.cr.aliyuncs.com',
+                    },
+                    {
+                        key: 'cn-huhehaote-ee-vpc',
+                        value: 'https://instanceName-registry-vpc.cn-huhehaote.cr.aliyuncs.com',
+                    },
+                    {
+                        key: 'cn-shenzhen-ee-vpc',
+                        value: 'https://instanceName-registry-vpc.cn-shenzhen.cr.aliyuncs.com',
+                    },
+                    {
+                        key: 'cn-chengdu-ee-vpc',
+                        value: 'https://instanceName-registry-vpc.cn-chengdu.cr.aliyuncs.com',
+                    },
+                    {
+                        key: 'cn-hongkong-ee-vpc',
+                        value: 'https://instanceName-registry-vpc.cn-hongkong.cr.aliyuncs.com',
+                    },
+                    {
+                        key: 'ap-southeast-1-ee-vpc',
+                        value: 'https://instanceName-registry-vpc.ap-southeast-1.cr.aliyuncs.com',
+                    },
+                    {
+                        key: 'ap-southeast-2-ee-vpc',
+                        value: 'https://instanceName-registry-vpc.ap-southeast-2.cr.aliyuncs.com',
+                    },
+                    {
+                        key: 'ap-southeast-3-ee-vpc',
+                        value: 'https://instanceName-registry-vpc.ap-southeast-3.cr.aliyuncs.com',
+                    },
+                    {
+                        key: 'ap-southeast-5-ee-vpc',
+                        value: 'https://instanceName-registry-vpc.ap-southeast-5.aliyuncs.cr.com',
+                    },
+                    {
+                        key: 'ap-northeast-1-ee-vpc',
+                        value: 'https://instanceName-registry-vpc.ap-northeast-1.cr.aliyuncs.com',
+                    },
+                    {
+                        key: 'ap-south-1-ee-vpc',
+                        value: 'https:/instanceName-/registry-vpc.ap-south-1.cr.aliyuncs.com',
+                    },
+                    {
+                        key: 'eu-central-1-ee-vpc',
+                        value: 'https://instanceName-registry-vpc.eu-central-1.cr.aliyuncs.com',
+                    },
+                    {
+                        key: 'eu-west-1-ee-vpc',
+                        value: 'https://instanceName-registry-vpc.eu-west-1.cr.aliyuncs.com',
+                    },
+                    {
+                        key: 'us-west-1-ee-vpc',
+                        value: 'https://instanceName-registry-vpc.us-west-1.cr.aliyuncs.com',
+                    },
+                    {
+                        key: 'us-east-1-ee-vpc',
+                        value: 'https://instanceName-registry-vpc.us-east-1.cr.aliyuncs.com',
+                    },
+                    {
+                        key: 'me-east-1-ee-vpc',
+                        value: 'https://instanceName-registry-vpc.me-east-1.cr.aliyuncs.com',
+                    },
+                    {
+                        key: 'cn-hangzhou-ee',
+                        value: `https://instanceName-registry.cn-hangzhou.cr.aliyuncs.com`,
+                    },
+                    {
+                        key: 'cn-shanghai-ee',
+                        value: 'https://instanceName-registry.cn-shanghai.cr.aliyuncs.com',
+                    },
+                    {
+                        key: 'cn-qingdao-ee',
+                        value: 'https://instanceName-registry.cn-qingdao.cr.aliyuncs.com',
+                    },
+                    {
+                        key: 'cn-beijing-ee',
+                        value: 'https://instanceName-registry.cn-beijing.cr.aliyuncs.com',
+                    },
+                    {
+                        key: 'cn-zhangjiakou-ee',
+                        value: 'https://instanceName-registry.cn-zhangjiakou.cr.aliyuncs.com',
+                    },
+                    {
+                        key: 'cn-huhehaote-ee',
+                        value: 'https://instanceName-registry.cn-huhehaote.cr.aliyuncs.com',
+                    },
+                    {
+                        key: 'cn-shenzhen-ee',
+                        value: 'https://instanceName-registry.cn-shenzhen.cr.aliyuncs.com',
+                    },
+                    {
+                        key: 'cn-chengdu-ee',
+                        value: 'https://instanceName-registry.cn-chengdu.cr.aliyuncs.com',
+                    },
+                    {
+                        key: 'cn-hongkong-ee',
+                        value: 'https://instanceName-registry.cn-hongkong.cr.aliyuncs.com',
+                    },
+                    {
+                        key: 'ap-southeast-1-ee',
+                        value: 'https://instanceName-registry.ap-southeast-1.cr.aliyuncs.com',
+                    },
+                    {
+                        key: 'ap-southeast-2-ee',
+                        value: 'https://instanceName-registry.ap-southeast-2.cr.aliyuncs.com',
+                    },
+                    {
+                        key: 'ap-southeast-3-ee',
+                        value: 'https://instanceName-registry.ap-southeast-3.cr.aliyuncs.com',
+                    },
+                    {
+                        key: 'ap-southeast-5-ee',
+                        value: 'https://instanceName-registry.ap-southeast-5.aliyuncs.cr.com',
+                    },
+                    {
+                        key: 'ap-northeast-1-ee',
+                        value: 'https://instanceName-registry.ap-northeast-1.cr.aliyuncs.com',
+                    },
+                    {
+                        key: 'ap-south-1-ee',
+                        value: 'https:/instanceName-/registry.ap-south-1.cr.aliyuncs.com',
+                    },
+                    {
+                        key: 'eu-central-1-ee',
+                        value: 'https://instanceName-registry.eu-central-1.cr.aliyuncs.com',
+                    },
+                    {
+                        key: 'eu-west-1-ee',
+                        value: 'https://instanceName-registry.eu-west-1.cr.aliyuncs.com',
+                    },
+                    {
+                        key: 'us-west-1-ee',
+                        value: 'https://instanceName-registry.us-west-1.cr.aliyuncs.com',
+                    },
+                    {
+                        key: 'us-east-1-ee',
+                        value: 'https://instanceName-registry-.us-east-1.cr.aliyuncs.com',
+                    },
+                    {
+                        key: 'me-east-1-ee',
+                        value: 'https://instanceName-registry.me-east-1.cr.aliyuncs.com',
+                    },
                 ],
             },
             credential_pattern: null,

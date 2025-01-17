@@ -1,5 +1,5 @@
 #!/bin/bash
-#docker version: 17.06.0+
+#docker version: 20.10.10+
 #docker-compose version: 1.18.0+
 #golang version: 1.12.0+
 
@@ -50,11 +50,11 @@ set -e
 function check_golang {
 	if ! go version &> /dev/null
 	then
-		warn "No golang package in your enviroment. You should use golang docker image build binary."
+		warn "No golang package in your environment. You should use golang docker image build binary."
 		return
 	fi
 
-	# docker has been installed and check its version
+	# golang has been installed and check its version
 	if [[ $(go version) =~ (([0-9]+)\.([0-9]+)([\.0-9]*)) ]]
 	then
 		golang_version=${BASH_REMATCH[1]}
@@ -78,7 +78,7 @@ function check_golang {
 function check_docker {
 	if ! docker --version &> /dev/null
 	then
-		error "Need to install docker(17.06.0+) first and run this script again."
+		error "Need to install docker(20.10.10+) first and run this script again."
 		exit 1
 	fi
 
@@ -93,7 +93,7 @@ function check_docker {
 		# the version of docker does not meet the requirement
 		if [ "$docker_version_part1" -lt 17 ] || ([ "$docker_version_part1" -eq 17 ] && [ "$docker_version_part2" -lt 6 ])
 		then
-			error "Need to upgrade docker package to 17.06.0+."
+			error "Need to upgrade docker package to 20.10.10+."
 			exit 1
 		fi
 	else
@@ -134,3 +134,5 @@ function check_dockercompose {
 		exit 1
 	fi
 }
+
+

@@ -50,8 +50,7 @@ export class SearchResultComponent implements OnInit, OnDestroy {
     constructor(
         private search: GlobalSearchService,
         private msgHandler: MessageHandlerService,
-        private searchTrigger: SearchTriggerService,
-        private appConfigService: AppConfigService
+        private searchTrigger: SearchTriggerService
     ) {}
 
     ngOnInit() {
@@ -61,9 +60,6 @@ export class SearchResultComponent implements OnInit, OnDestroy {
                     if (term === '') {
                         this.searchResults.project = [];
                         this.searchResults.repository = [];
-                        if (this.withHelmChart) {
-                            this.searchResults.chart = [];
-                        }
                     }
                     return !!(term && term.trim());
                 }),
@@ -116,11 +112,6 @@ export class SearchResultComponent implements OnInit, OnDestroy {
             src.repository.forEach(repo =>
                 res.repository.push(Object.assign({}, repo))
             );
-            if (this.withHelmChart) {
-                src.chart.forEach(chart =>
-                    res.chart.push(JSON.parse(JSON.stringify(chart)))
-                );
-            }
             return res;
         }
 
@@ -157,9 +148,6 @@ export class SearchResultComponent implements OnInit, OnDestroy {
         if (!term || term.trim() === '') {
             this.searchResults.project = [];
             this.searchResults.repository = [];
-            if (this.withHelmChart) {
-                this.searchResults.chart = [];
-            }
             return;
         }
         // Do nothing if search is ongoing
@@ -188,7 +176,11 @@ export class SearchResultComponent implements OnInit, OnDestroy {
             }
         );
     }
-    get withHelmChart(): boolean {
-        return this.appConfigService.getConfig().with_chartmuseum;
+    getTopValue(): number {
+        const headerHeight: number =
+            document.querySelector('navigator')?.clientHeight || 0;
+        const bannerHeight: number =
+            document.querySelector('app-app-level-alerts')?.clientHeight || 0;
+        return headerHeight + bannerHeight;
     }
 }

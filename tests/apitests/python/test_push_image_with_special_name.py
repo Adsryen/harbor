@@ -5,7 +5,6 @@ import urllib
 from testutils import ADMIN_CLIENT, suppress_urllib3_warning
 from testutils import harbor_server
 from testutils import TEARDOWN
-from library.sign import sign_image
 from library.artifact import Artifact
 from library.project import Project
 from library.user import User
@@ -53,7 +52,7 @@ class TestProjects(unittest.TestCase):
         #1. Create user-001
         TestProjects.user_sign_image_id, user_sign_image_name = self.user.create_user(user_password = user_001_password, **ADMIN_CLIENT)
 
-        TestProjects.USER_sign_image_CLIENT=dict(with_signature = True, endpoint = url, username = user_sign_image_name, password = user_001_password)
+        TestProjects.USER_sign_image_CLIENT=dict(endpoint = url, username = user_sign_image_name, password = user_001_password)
 
         #2. Create a new private project(PA) by user(UA);
         TestProjects.project_sign_image_id, TestProjects.project_sign_image_name = self.project.create_project(metadata = {"public": "false"}, **ADMIN_CLIENT)

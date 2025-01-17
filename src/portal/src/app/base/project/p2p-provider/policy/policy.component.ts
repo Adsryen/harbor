@@ -56,6 +56,9 @@ import {
     EventService,
     HarborEvent,
 } from '../../../../services/event-service/event.service';
+import { JobserviceService } from '../../../../../../ng-swagger-gen/services/jobservice.service';
+import { ScheduleService } from '../../../../../../ng-swagger-gen/services/schedule.service';
+import { JobType } from '../../../left-side-nav/job-service-dashboard/job-service-dashboard.interface';
 // The route path which will display this component
 const URL_TO_DISPLAY: RegExp =
     /\/harbor\/projects\/(\d+)\/p2p-provider\/policies/;
@@ -109,6 +112,7 @@ export class PolicyComponent implements OnInit, OnDestroy {
     policyPage: number = 1;
     totalPolicy: number = 0;
     state: ClrDatagridStateInterface;
+    paused: boolean = false;
     constructor(
         private route: ActivatedRoute,
         private router: Router,
@@ -117,10 +121,18 @@ export class PolicyComponent implements OnInit, OnDestroy {
         private messageHandlerService: MessageHandlerService,
         private userPermissionService: UserPermissionService,
         private preheatService: PreheatService,
-        private event: EventService
+        private event: EventService,
+        private scheduleService: ScheduleService
     ) {}
 
     ngOnInit() {
+        this.scheduleService
+            .getSchedulePaused({
+                jobType: JobType.ALL,
+            })
+            .subscribe(res => {
+                this.paused = res?.paused;
+            });
         if (!this.scrollSub) {
             this.scrollSub = this.event.subscribe(HarborEvent.SCROLL, v => {
                 if (v && URL_TO_DISPLAY.test(v.url)) {
@@ -468,6 +480,13 @@ export class PolicyComponent implements OnInit, OnDestroy {
                 this.addP2pPolicyComponent.triggerType = trigger.type;
                 this.addP2pPolicyComponent.cron = trigger.trigger_setting.cron;
             }
+            if (this.addP2pPolicyComponent.policy.extra_attrs) {
+                const { scope = '', cluster_ids = [] } = JSON.parse(
+                    this.addP2pPolicyComponent.policy.extra_attrs
+                );
+                this.addP2pPolicyComponent.scope = scope;
+                this.addP2pPolicyComponent.clusterIDs = cluster_ids.join(',');
+            }
             this.addP2pPolicyComponent.currentForm.reset({
                 provider: this.addP2pPolicyComponent.policy.provider_id,
                 name: this.addP2pPolicyComponent.policy.name,
@@ -478,6 +497,8 @@ export class PolicyComponent implements OnInit, OnDestroy {
                 severity: this.addP2pPolicyComponent.severity,
                 label: this.addP2pPolicyComponent.labels,
                 triggerType: this.addP2pPolicyComponent.triggerType,
+                scope: this.addP2pPolicyComponent.scope,
+                clusterIDs: this.addP2pPolicyComponent.clusterIDs,
             });
             this.addP2pPolicyComponent.originPolicyForEdit = clone(
                 this.selectedRow
@@ -496,6 +517,10 @@ export class PolicyComponent implements OnInit, OnDestroy {
                 this.addP2pPolicyComponent.triggerType;
             this.addP2pPolicyComponent.originCronForEdit =
                 this.addP2pPolicyComponent.cron;
+            this.addP2pPolicyComponent.originScopeForEdit =
+                this.addP2pPolicyComponent.scope;
+            this.addP2pPolicyComponent.originClusterIDsForEdit =
+                this.addP2pPolicyComponent.clusterIDs;
         }
     }
 
@@ -638,6 +663,9 @@ export class PolicyComponent implements OnInit, OnDestroy {
 
     getTriggerTypeI18n(trigger: string): string {
         if (JSON.parse(trigger).type) {
+            if (this.paused && JSON.parse(trigger).type === TRIGGER.SCHEDULED) {
+                return TRIGGER_I18N_MAP[TRIGGER.SCHEDULED_PAUSED];
+            }
             return TRIGGER_I18N_MAP[JSON.parse(trigger).type];
         }
         return TRIGGER_I18N_MAP[TRIGGER.MANUAL];

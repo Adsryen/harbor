@@ -93,7 +93,7 @@ func (s *SecurityContext) Can(ctx context.Context, action types.Action, resource
 				accesses = append(accesses, &types.Policy{
 					Action:   a.Action,
 					Effect:   a.Effect,
-					Resource: types.Resource(fmt.Sprintf("%s/%s", p.Scope, a.Resource)),
+					Resource: types.Resource(getPolicyResource(p, a)),
 				})
 			}
 		}
@@ -111,7 +111,8 @@ func (s *SecurityContext) Can(ctx context.Context, action types.Action, resource
 			}
 			if len(sysPolicies) != 0 {
 				evaluators = evaluators.Add(system.NewEvaluator(s.GetUsername(), sysPolicies))
-			} else if len(proPolicies) != 0 {
+			}
+			if len(proPolicies) != 0 {
 				evaluators = evaluators.Add(rbac_project.NewEvaluator(s.ctl, rbac_project.NewBuilderForPolicies(s.GetUsername(), proPolicies)))
 			}
 			s.evaluator = evaluators
@@ -119,7 +120,6 @@ func (s *SecurityContext) Can(ctx context.Context, action types.Action, resource
 			s.evaluator = rbac_project.NewEvaluator(s.ctl, rbac_project.NewBuilderForPolicies(s.GetUsername(), accesses, filterRobotPolicies))
 		}
 	})
-
 	return s.evaluator != nil && s.evaluator.HasPermission(ctx, resource, action)
 }
 
@@ -137,4 +137,12 @@ func filterRobotPolicies(p *models.Project, policies []*types.Policy) []*types.P
 		}
 	}
 	return results
+}
+
+// getPolicyResource to determine permissions for the project resource, the path should be /project instead of /project/project.
+func getPolicyResource(perm *robot.Permission, pol *types.Policy) string {
+	if strings.HasPrefix(perm.Scope, robot.SCOPEPROJECT) && pol.Resource == rbac.ResourceProject {
+		return perm.Scope
+	}
+	return fmt.Sprintf("%s/%s", perm.Scope, pol.Resource)
 }

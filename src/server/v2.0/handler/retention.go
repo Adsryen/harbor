@@ -1,3 +1,17 @@
+// Copyright Project Harbor Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package handler
 
 import (
@@ -119,7 +133,7 @@ var (
 	}
 )
 
-func (r *retentionAPI) Prepare(ctx context.Context, operation string, params interface{}) middleware.Responder {
+func (r *retentionAPI) Prepare(ctx context.Context, _ string, _ interface{}) middleware.Responder {
 	if err := r.RequireAuthenticated(ctx); err != nil {
 		return r.SendError(ctx, err)
 	}
@@ -127,7 +141,7 @@ func (r *retentionAPI) Prepare(ctx context.Context, operation string, params int
 	return nil
 }
 
-func (r *retentionAPI) GetRentenitionMetadata(ctx context.Context, params operation.GetRentenitionMetadataParams) middleware.Responder {
+func (r *retentionAPI) GetRentenitionMetadata(_ context.Context, _ operation.GetRentenitionMetadataParams) middleware.Responder {
 	return operation.NewGetRentenitionMetadataOK().WithPayload(rentenitionMetadataPayload)
 }
 
@@ -424,13 +438,13 @@ func (r *retentionAPI) requireExecutionInProject(ctx context.Context, p *policy.
 		return err
 	}
 	if exec == nil {
-		return errors.New(nil).WithMessage("project: %d, execution id %d not found", p.Scope.Reference, executionID).WithCode(errors.NotFoundCode)
+		return errors.New(nil).WithMessagef("project: %d, execution id %d not found", p.Scope.Reference, executionID).WithCode(errors.NotFoundCode)
 	}
 	if exec.PolicyID != p.ID {
-		return errors.New(nil).WithMessage("project: %d, execution id %d not found", p.Scope.Reference, executionID).WithCode(errors.NotFoundCode)
+		return errors.New(nil).WithMessagef("project: %d, execution id %d not found", p.Scope.Reference, executionID).WithCode(errors.NotFoundCode)
 	}
-	if exec.Type != job.Retention {
-		return errors.New(nil).WithMessage("project: %d, execution id %d not found", p.Scope.Reference, executionID).WithCode(errors.NotFoundCode)
+	if exec.Type != job.RetentionVendorType {
+		return errors.New(nil).WithMessagef("project: %d, execution id %d not found", p.Scope.Reference, executionID).WithCode(errors.NotFoundCode)
 	}
 	return nil
 }
@@ -444,10 +458,10 @@ func (r *retentionAPI) requireTaskInProject(ctx context.Context, p *policy.Metad
 		return err
 	}
 	if task == nil {
-		return errors.New(nil).WithMessage("project: %d, execution id %d not found", p.Scope.Reference, executionID).WithCode(errors.NotFoundCode)
+		return errors.New(nil).WithMessagef("project: %d, execution id %d not found", p.Scope.Reference, executionID).WithCode(errors.NotFoundCode)
 	}
 	if task.ExecutionID != executionID {
-		return errors.New(nil).WithMessage("project: %d, execution id %d not found", p.Scope.Reference, executionID).WithCode(errors.NotFoundCode)
+		return errors.New(nil).WithMessagef("project: %d, execution id %d not found", p.Scope.Reference, executionID).WithCode(errors.NotFoundCode)
 	}
 	return nil
 }

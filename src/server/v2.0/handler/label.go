@@ -1,3 +1,17 @@
+// Copyright Project Harbor Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package handler
 
 import (
@@ -8,9 +22,7 @@ import (
 	"github.com/go-openapi/runtime/middleware"
 
 	"github.com/goharbor/harbor/src/common"
-	"github.com/goharbor/harbor/src/common/dao"
 	"github.com/goharbor/harbor/src/common/rbac"
-	"github.com/goharbor/harbor/src/common/rbac/system"
 	"github.com/goharbor/harbor/src/controller/project"
 	"github.com/goharbor/harbor/src/lib"
 	"github.com/goharbor/harbor/src/lib/errors"
@@ -66,7 +78,7 @@ func (lAPI *labelAPI) GetLabelByID(ctx context.Context, params operation.GetLabe
 		return lAPI.SendError(ctx, err)
 	}
 	if label == nil || label.Deleted {
-		return lAPI.SendError(ctx, errors.New(nil).WithMessage("label %d not found", params.LabelID).WithCode(errors.NotFoundCode))
+		return lAPI.SendError(ctx, errors.New(nil).WithMessagef("label %d not found", params.LabelID).WithCode(errors.NotFoundCode))
 	}
 
 	if err := lAPI.requireAccess(ctx, label, rbac.ActionRead); err != nil {
@@ -84,7 +96,7 @@ func (lAPI *labelAPI) ListLabels(ctx context.Context, params operation.ListLabel
 
 	scope := lib.StringValue(params.Scope)
 	if scope != common.LabelScopeGlobal && scope != common.LabelScopeProject {
-		return lAPI.SendError(ctx, errors.New(nil).WithMessage("invalid scope: %s", scope).WithCode(errors.BadRequestCode))
+		return lAPI.SendError(ctx, errors.New(nil).WithMessagef("invalid scope: %s", scope).WithCode(errors.BadRequestCode))
 	}
 	query.Keywords["Level"] = common.LabelLevelUser
 	query.Keywords["Scope"] = scope
@@ -136,7 +148,7 @@ func (lAPI *labelAPI) UpdateLabel(ctx context.Context, params operation.UpdateLa
 		return lAPI.SendError(ctx, err)
 	}
 	if label == nil || label.Deleted {
-		return lAPI.SendError(ctx, errors.New(nil).WithMessage("label %d not found", params.LabelID).WithCode(errors.NotFoundCode))
+		return lAPI.SendError(ctx, errors.New(nil).WithMessagef("label %d not found", params.LabelID).WithCode(errors.NotFoundCode))
 	}
 
 	if err := lAPI.requireAccess(ctx, label, rbac.ActionUpdate); err != nil {
@@ -167,10 +179,6 @@ func (lAPI *labelAPI) DeleteLabel(ctx context.Context, params operation.DeleteLa
 		return lAPI.SendError(ctx, err)
 	}
 	id := label.ID
-	// TODO remove this step once chart-museum is removed.
-	if err := dao.DeleteResourceLabelByLabel(id); err != nil {
-		return lAPI.SendError(ctx, err)
-	}
 	if err := lAPI.labelMgr.RemoveFromAllArtifacts(ctx, id); err != nil {
 		return lAPI.SendError(ctx, err)
 	}
@@ -184,8 +192,7 @@ func (lAPI *labelAPI) DeleteLabel(ctx context.Context, params operation.DeleteLa
 func (lAPI *labelAPI) requireAccess(ctx context.Context, label *pkg_model.Label, action rbac.Action, subresources ...rbac.Resource) error {
 	switch label.Scope {
 	case common.LabelScopeGlobal:
-		resource := system.NewNamespace().Resource(rbac.ResourceLabel)
-		return lAPI.RequireSystemAccess(ctx, action, resource)
+		return lAPI.RequireSystemAccess(ctx, action, rbac.ResourceLabel)
 	case common.LabelScopeProject:
 		if len(subresources) == 0 {
 			subresources = append(subresources, rbac.ResourceLabel)
