@@ -252,6 +252,18 @@ export const DEFAULT_PAGE_SIZE: number = 15;
  */
 export const DEFAULT_SUPPORTED_MIME_TYPES =
     'application/vnd.security.vulnerability.report; version=1.1, application/vnd.scanner.adapter.vuln.report.harbor+json; version=1.0';
+/**
+ *  The default supported mime type for SBOM
+ */
+export const DEFAULT_SBOM_SUPPORTED_MIME_TYPES =
+    'application/vnd.security.sbom.report+json; version=1.0';
+/**
+ *  The SBOM supported additional mime types
+ */
+export const SBOM_SUPPORTED_ADDITIONAL_MIME_TYPES = [
+    'application/spdx+json',
+    // 'application/vnd.cyclonedx+json', // feature release
+];
 
 /**
  *  the property name of vulnerability database updated time
@@ -267,6 +279,21 @@ export const DATABASE_NEXT_UPDATE_PROPERTY =
 export const VULNERABILITY_SCAN_STATUS = {
     // front-end status
     NOT_SCANNED: 'Not Scanned',
+    // back-end status
+    PENDING: 'Pending',
+    RUNNING: 'Running',
+    ERROR: 'Error',
+    STOPPED: 'Stopped',
+    SUCCESS: 'Success',
+    SCHEDULED: 'Scheduled',
+};
+
+/**
+ * The state of sbom generation
+ */
+export const SBOM_SCAN_STATUS = {
+    // front-end status
+    NOT_GENERATED_SBOM: 'No SBOM',
     // back-end status
     PENDING: 'Pending',
     RUNNING: 'Running',
@@ -463,6 +490,26 @@ export function downloadFile(fileData) {
     a.setAttribute('style', 'display: none');
     a.href = url;
     a.download = fileData.filename;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    a.remove();
+}
+
+/**
+ * Download the Json Object as a Json file to local.
+ * @param data Json Object
+ * @param filename Json filename
+ */
+export function downloadJson(data, filename) {
+    const blob = new Blob([JSON.stringify(data)], {
+        type: 'application/json;charset=utf-8',
+    });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    document.body.appendChild(a);
+    a.setAttribute('style', 'display: none');
+    a.href = url;
+    a.download = filename;
     a.click();
     window.URL.revokeObjectURL(url);
     a.remove();
@@ -888,6 +935,11 @@ export function delUrlParam(url: string, key: string): string {
 
 const PAGE_SIZE_MAP_KEY: string = 'pageSizeMap';
 
+interface DataGridMetadata {
+    pageSize?: number;
+    columnHiddenArray?: boolean[];
+}
+
 /**
  * Get the page size from the browser's localStorage
  * @param key
@@ -901,10 +953,12 @@ export function getPageSizeFromLocalStorage(
         initialSize = DEFAULT_PAGE_SIZE;
     }
     if (localStorage && key && localStorage.getItem(PAGE_SIZE_MAP_KEY)) {
-        const pageSizeMap: {
-            [k: string]: number;
+        const metadataMap: {
+            [k: string]: DataGridMetadata;
         } = JSON.parse(localStorage.getItem(PAGE_SIZE_MAP_KEY));
-        return pageSizeMap[key] ? pageSizeMap[key] : initialSize;
+        return metadataMap[key]?.pageSize
+            ? metadataMap[key]?.pageSize
+            : initialSize;
     }
     return initialSize;
 }
@@ -920,12 +974,86 @@ export function setPageSizeToLocalStorage(key: string, pageSize: number) {
             // if first set
             localStorage.setItem(PAGE_SIZE_MAP_KEY, '{}');
         }
-        const pageSizeMap: {
-            [k: string]: number;
+        const metadataMap: {
+            [k: string]: DataGridMetadata;
         } = JSON.parse(localStorage.getItem(PAGE_SIZE_MAP_KEY));
-        pageSizeMap[key] = pageSize;
-        localStorage.setItem(PAGE_SIZE_MAP_KEY, JSON.stringify(pageSizeMap));
+        if (!isObject(metadataMap[key])) {
+            metadataMap[key] = {};
+        }
+        metadataMap[key].pageSize = pageSize;
+        localStorage.setItem(PAGE_SIZE_MAP_KEY, JSON.stringify(metadataMap));
     }
+}
+
+/**
+ * Get the hidden array from the browser's localStorage
+ * @param key
+ * @param initialArray
+ */
+export function getHiddenArrayFromLocalStorage(
+    key: string,
+    initialArray: boolean[]
+) {
+    if (!initialArray?.length) {
+        initialArray = [];
+    }
+    if (localStorage && key && localStorage.getItem(PAGE_SIZE_MAP_KEY)) {
+        const metadataMap: {
+            [k: string]: DataGridMetadata;
+        } = JSON.parse(localStorage.getItem(PAGE_SIZE_MAP_KEY));
+        return metadataMap[key]?.columnHiddenArray
+            ? metadataMap[key]?.columnHiddenArray
+            : initialArray;
+    }
+    return initialArray;
+}
+
+/**
+ * Set the hidden array to the browser's localStorage
+ * @param key
+ * @param hiddenArray
+ */
+export function setHiddenArrayToLocalStorage(
+    key: string,
+    hiddenArray: boolean[]
+) {
+    if (localStorage && key && hiddenArray?.length) {
+        if (!localStorage.getItem(PAGE_SIZE_MAP_KEY)) {
+            // if first set
+            localStorage.setItem(PAGE_SIZE_MAP_KEY, '{}');
+        }
+        const metadataMap: {
+            [k: string]: DataGridMetadata;
+        } = JSON.parse(localStorage.getItem(PAGE_SIZE_MAP_KEY));
+        if (!isObject(metadataMap[key])) {
+            metadataMap[key] = {};
+        }
+        metadataMap[key].columnHiddenArray = hiddenArray;
+        localStorage.setItem(PAGE_SIZE_MAP_KEY, JSON.stringify(metadataMap));
+    }
+}
+
+/**
+ * Convert seconds to xx hrs xx min xx sec
+ * @param distance in milliseconds
+ */
+export function durationStr(distance: number): string {
+    const hours = Math.floor(distance / 3600000);
+    distance -= hours * 3600000;
+    const minutes = Math.floor(distance / 60000);
+    distance -= minutes * 60000;
+    const seconds = Math.floor(distance / 1000);
+    let result: string = '';
+    if (seconds) {
+        result = `${seconds}sec`;
+    }
+    if (minutes) {
+        result = `${minutes}min ${seconds}sec`;
+    }
+    if (hours) {
+        result = `${hours}hrs ${minutes}min ${seconds}sec`;
+    }
+    return result ? result : '0';
 }
 
 export enum PageSizeMapKeys {
@@ -934,8 +1062,7 @@ export enum PageSizeMapKeys {
     ARTIFACT_LIST_TAB_COMPONENT = 'ArtifactListTabComponent',
     ARTIFACT_TAGS_COMPONENT = 'ArtifactTagComponent',
     ARTIFACT_VUL_COMPONENT = 'ArtifactVulnerabilitiesComponent',
-    HELM_CHART_COMPONENT = 'HelmChartComponent',
-    CHART_VERSION_COMPONENT = 'ChartVersionComponent',
+    ARTIFACT_SBOM_COMPONENT = 'ArtifactSbomComponent',
     MEMBER_COMPONENT = 'MemberComponent',
     LABEL_COMPONENT = 'LabelComponent',
     P2P_POLICY_COMPONENT = 'P2pPolicyComponent',
@@ -944,6 +1071,8 @@ export enum PageSizeMapKeys {
     TAG_RETENTION_COMPONENT = 'TagRetentionComponent',
     PROJECT_ROBOT_COMPONENT = 'ProjectRobotAccountComponent',
     WEBHOOK_COMPONENT = 'WebhookComponent',
+    WEBHOOK_EXECUTIONS_COMPONENT = 'Webhook_Execution_Component',
+    WEBHOOK_TASKS_COMPONENT = 'Webhook_Tasks_Component',
     PROJECT_AUDIT_LOG_COMPONENT = 'ProjectAuditLogComponent',
     SYSTEM_RECENT_LOG_COMPONENT = 'SystemRecentLogComponent',
     SYSTEM_USER_COMPONENT = 'SystemUserComponent',
@@ -957,4 +1086,9 @@ export enum PageSizeMapKeys {
     SYSTEM_SCANNER_COMPONENT = 'ConfigurationScannerComponent',
     GC_HISTORY_COMPONENT = 'GcHistoryComponent',
     SYSTEM_GROUP_COMPONENT = 'SystemGroupComponent',
+    WORKER_LIST_COMPONENT_POOL = 'WorkerListComponentPool',
+    WORKER_LIST_COMPONENT_WORKER = 'WorkerListComponentWorker',
+    SCHEDULE_LIST_COMPONENT = 'ScheduleListComponent',
+    PENDING_LIST_COMPONENT = 'PendingListComponent',
+    SECURITY_HUB_VUL = 'SecurityHubComponent',
 }

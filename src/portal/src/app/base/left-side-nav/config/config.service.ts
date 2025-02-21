@@ -11,6 +11,10 @@ import { clone } from '../../../shared/units/utils';
 import { MessageHandlerService } from '../../../shared/services/message-handler.service';
 import { finalize } from 'rxjs/operators';
 import { Observable, Subscription } from 'rxjs';
+import {
+    EventService,
+    HarborEvent,
+} from '../../../services/event-service/event.service';
 
 const fakePass = 'aWpLOSYkIzJTTU4wMDkx';
 
@@ -24,7 +28,8 @@ export class ConfigService {
     constructor(
         private confirmService: ConfirmationDialogService,
         private configureService: ConfigureService,
-        private msgHandler: MessageHandlerService
+        private msgHandler: MessageHandlerService,
+        private event: EventService
     ) {
         this._confirmSub = this.confirmService.confirmationConfirm$.subscribe(
             confirmation => {
@@ -66,6 +71,7 @@ export class ConfigService {
             .subscribe(
                 res => {
                     this._currentConfig = res as Configuration;
+                    this.event.publish(HarborEvent.REFRESH_BANNER_MESSAGE);
                     // Add password fields
                     this._currentConfig.email_password = new StringValueItem(
                         fakePass,
@@ -79,6 +85,10 @@ export class ConfigService {
                     );
                     this._currentConfig.oidc_client_secret =
                         new StringValueItem(fakePass, true);
+                    if (!this._currentConfig.disabled_audit_log_event_types) {
+                        this._currentConfig.disabled_audit_log_event_types =
+                            new StringValueItem('', true);
+                    }
                     // Keep the original copy of the data
                     this._originalConfig = clone(this._currentConfig);
                 },

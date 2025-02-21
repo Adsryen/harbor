@@ -1,16 +1,16 @@
-//  Copyright Project Harbor Authors
+// Copyright Project Harbor Authors
 //
-//  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//    http://www.apache.org/licenses/LICENSE-2.0
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the License is distributed on an "AS IS" BASIS,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the License for the specific language governing permissions and
-//  limitations under the License.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package config
 
@@ -81,6 +81,7 @@ func LDAPGroupConf(ctx context.Context) (*cfgModels.GroupConf, error) {
 		SearchScope:         mgr.Get(ctx, common.LDAPGroupSearchScope).GetInt(),
 		AdminDN:             mgr.Get(ctx, common.LDAPGroupAdminDn).GetString(),
 		MembershipAttribute: mgr.Get(ctx, common.LDAPGroupMembershipAttribute).GetString(),
+		AttachParallel:      mgr.Get(ctx, common.LDAPGroupAttachParallel).GetBool(),
 	}, nil
 }
 
@@ -186,6 +187,7 @@ func GDPRSetting(ctx context.Context) (*cfgModels.GDPRSetting, error) {
 	}
 	return &cfgModels.GDPRSetting{
 		DeleteUser: DefaultMgr().Get(ctx, common.GDPRDeleteUser).GetBool(),
+		AuditLogs:  DefaultMgr().Get(ctx, common.GDPRAuditLogs).GetBool(),
 	}, nil
 }
 
@@ -248,4 +250,30 @@ func AuditLogForwardEndpoint(ctx context.Context) string {
 // SkipAuditLogDatabase returns the audit log forward endpoint
 func SkipAuditLogDatabase(ctx context.Context) bool {
 	return DefaultMgr().Get(ctx, common.SkipAuditLogDatabase).GetBool()
+}
+
+// ScannerSkipUpdatePullTime returns the scanner skip update pull time setting
+func ScannerSkipUpdatePullTime(ctx context.Context) bool {
+	return DefaultMgr().Get(ctx, common.ScannerSkipUpdatePullTime).GetBool()
+}
+
+// BannerMessage returns the customized banner message
+func BannerMessage(ctx context.Context) string {
+	return DefaultMgr().Get(ctx, common.BannerMessage).GetString()
+}
+
+// AuditLogEventEnabled returns the audit log enabled setting for a specific event_type, such as delete_user, create_user
+func AuditLogEventEnabled(ctx context.Context, eventType string) bool {
+	if DefaultMgr() == nil || DefaultMgr().Get(ctx, common.AuditLogEventsDisabled) == nil {
+		return true
+	}
+	disableListStr := DefaultMgr().Get(ctx, common.AuditLogEventsDisabled).GetString()
+	disableList := strings.Split(disableListStr, ",")
+	for _, t := range disableList {
+		tName := strings.TrimSpace(t)
+		if strings.EqualFold(tName, eventType) {
+			return false
+		}
+	}
+	return true
 }

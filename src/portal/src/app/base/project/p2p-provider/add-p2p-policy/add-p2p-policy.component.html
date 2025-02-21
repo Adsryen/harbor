@@ -97,7 +97,7 @@
                             ">
                             <div class="clr-input-wrapper">
                                 <input
-                                    pattern="^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
+                                    pattern="^[A-Za-z0-9]+(?:[._-][A-Za-z0-9]+)*$"
                                     [disabled]="loading"
                                     autocomplete="off"
                                     class="clr-input width-380"
@@ -288,7 +288,7 @@
                     </div>
                     <div
                         class="clr-form-control margin-top-06"
-                        *ngIf="withNotary() && enableContentTrust">
+                        *ngIf="enableContentTrust">
                         <label class="clr-control-label width-6rem">
                             <span>{{
                                 'P2P_PROVIDER.CRITERIA' | translate
@@ -330,12 +330,10 @@
                         </div>
                     </div>
                     <div
-                        class="clr-form-control margin-top-06"
-                        *ngIf="preventVul"
-                        [ngClass]="{ 'mt-1': !withNotary() }">
+                        class="clr-form-control margin-top-06 mt-1"
+                        *ngIf="preventVul">
                         <label for="repo" class="clr-control-label width-6rem">
-                            <ng-container
-                                *ngIf="!(withNotary() && enableContentTrust)">
+                            <ng-container *ngIf="!enableContentTrust">
                                 <span>{{
                                     'P2P_PROVIDER.CRITERIA' | translate
                                 }}</span>
@@ -457,6 +455,67 @@
                                 [isInlineModel]="true"
                                 [originCron]="getCron()"
                                 (inputvalue)="setCron($event)"></cron-selection>
+                        </div>
+                    </div>
+                    <!-- dragonfly provider customization -->
+                    <div *ngIf="isDragonflyProvider(policy.provider_id)">
+                        <!-- scope -->
+                        <div class="clr-form-control">
+                            <clr-select-container>
+                                <label class="clr-control-label width-6rem">
+                                    {{
+                                        'P2P_PROVIDER.DRAGONFLY.SCOPE'
+                                            | translate
+                                    }}
+                                </label>
+                                <select
+                                    class="width-380"
+                                    [disabled]="loading"
+                                    clrSelect
+                                    name="scope"
+                                    id="scope"
+                                    [(ngModel)]="scope"
+                                    #ngScope="ngModel">
+                                    <option
+                                        class="display-none"
+                                        value=""></option>
+                                    <option
+                                        [selected]="policy.scope === item"
+                                        *ngFor="let item of scopes"
+                                        value="{{ item }}">
+                                        {{ getScopeI18n(item) | translate }}
+                                    </option>
+                                </select>
+                            </clr-select-container>
+                        </div>
+                        <!-- cluster_ids -->
+                        <div class="clr-form-control">
+                            <label
+                                for="clusterIDs"
+                                class="clr-control-label width-6rem"
+                                >{{
+                                    'P2P_PROVIDER.DRAGONFLY.CLUSTER_IDS'
+                                        | translate
+                                }}</label
+                            >
+                            <div class="clr-control-container">
+                                <div class="clr-input-wrapper">
+                                    <input
+                                        [disabled]="loading"
+                                        autocomplete="off"
+                                        class="clr-input width-380"
+                                        type="text"
+                                        id="clusterIDs"
+                                        [(ngModel)]="clusterIDs"
+                                        size="30"
+                                        name="clusterIDs"
+                                        #ngClusterIDs="ngModel" />
+                                </div>
+                                <clr-control-helper class="opacity-08">{{
+                                    'P2P_PROVIDER.DRAGONFLY.CLUSTER_IDS_SEPARATOR'
+                                        | translate
+                                }}</clr-control-helper>
+                            </div>
                         </div>
                     </div>
                 </section>

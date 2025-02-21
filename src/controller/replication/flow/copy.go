@@ -132,7 +132,7 @@ func (c *copyFlow) createTasks(ctx context.Context, srcResources, dstResources [
 		}
 
 		job := &task.Job{
-			Name: job.Replication,
+			Name: job.ReplicationVendorType,
 			Metadata: &job.Metadata{
 				JobKind: job.KindGeneric,
 			},
@@ -148,7 +148,8 @@ func (c *copyFlow) createTasks(ctx context.Context, srcResources, dstResources [
 			"operation":            "copy",
 			"resource_type":        string(srcResource.Type),
 			"source_resource":      getResourceName(srcResource),
-			"destination_resource": getResourceName(dstResource)}); err != nil {
+			"destination_resource": getResourceName(dstResource),
+			"references":           getResourceReferences(dstResource)}); err != nil {
 			return err
 		}
 

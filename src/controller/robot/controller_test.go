@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/goharbor/harbor/src/common"
+	"github.com/goharbor/harbor/src/common/security"
 	"github.com/goharbor/harbor/src/common/utils/test"
 	"github.com/goharbor/harbor/src/lib/config"
 	"github.com/goharbor/harbor/src/lib/q"
@@ -18,6 +19,7 @@ import (
 	rbac_model "github.com/goharbor/harbor/src/pkg/rbac/model"
 	"github.com/goharbor/harbor/src/pkg/robot/model"
 	htesting "github.com/goharbor/harbor/src/testing"
+	testsec "github.com/goharbor/harbor/src/testing/common/security"
 	"github.com/goharbor/harbor/src/testing/mock"
 	"github.com/goharbor/harbor/src/testing/pkg/project"
 	"github.com/goharbor/harbor/src/testing/pkg/rbac"
@@ -40,7 +42,7 @@ func (suite *ControllerTestSuite) TestGet() {
 		Name:        "library+test",
 		Description: "test get method",
 		ProjectID:   1,
-		Secret:      utils.RandStringBytes(10),
+		Secret:      utils.GetNonce(),
 	}, nil)
 	rbacMgr.On("GetPermissionsByRole", mock.Anything, mock.Anything, mock.Anything).Return([]*rbac_model.UniversalRolePermission{
 		{
@@ -102,7 +104,9 @@ func (suite *ControllerTestSuite) TestCreate() {
 	robotMgr := &robot.Manager{}
 
 	c := controller{robotMgr: robotMgr, rbacMgr: rbacMgr, proMgr: projectMgr}
-	ctx := context.TODO()
+	secCtx := &testsec.Context{}
+	secCtx.On("GetUsername").Return("security-context-user")
+	ctx := security.NewContext(context.Background(), secCtx)
 	projectMgr.On("Get", mock.Anything, mock.Anything).Return(&proModels.Project{ProjectID: 1, Name: "library"}, nil)
 	robotMgr.On("Create", mock.Anything, mock.Anything).Return(int64(1), nil)
 	rbacMgr.On("CreateRbacPolicy", mock.Anything, mock.Anything, mock.Anything).Return(int64(1), nil)
@@ -145,6 +149,12 @@ func (suite *ControllerTestSuite) TestDelete() {
 	c := controller{robotMgr: robotMgr, rbacMgr: rbacMgr, proMgr: projectMgr}
 	ctx := context.TODO()
 
+	robotMgr.On("Get", mock.Anything, mock.Anything).Return(&model.Robot{
+		Name:        "library+test",
+		Description: "test get method",
+		ProjectID:   1,
+		Secret:      utils.GetNonce(),
+	}, nil)
 	robotMgr.On("Delete", mock.Anything, mock.Anything).Return(nil)
 	rbacMgr.On("DeletePermissionsByRole", mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
@@ -216,7 +226,7 @@ func (suite *ControllerTestSuite) TestList() {
 			Name:        "test",
 			Description: "test list method",
 			ProjectID:   1,
-			Secret:      utils.RandStringBytes(10),
+			Secret:      utils.GetNonce(),
 		},
 	}, nil)
 	rbacMgr.On("GetPermissionsByRole", mock.Anything, mock.Anything, mock.Anything).Return([]*rbac_model.UniversalRolePermission{
@@ -300,6 +310,12 @@ func (suite *ControllerTestSuite) TestIsValidSec() {
 	sec = "1234abcd"
 	suite.False(IsValidSec(sec))
 	sec = "123abc"
+	suite.False(IsValidSec(sec))
+	// secret of length 128 characters long should be ok
+	sec = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcd"
+	suite.True(IsValidSec(sec))
+	// secret of length larger than 128 characters long, such as 129 characters long, should return false
+	sec = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcde"
 	suite.False(IsValidSec(sec))
 }
 

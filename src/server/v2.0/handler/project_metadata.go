@@ -138,25 +138,31 @@ func (p *projectMetadataAPI) validate(metas map[string]string) (map[string]strin
 	}
 
 	key, value := "", ""
-	for key, value = range metas {
+	for key, value = range metas { // nolint:revive
 	}
 
 	switch key {
 	case proModels.ProMetaPublic, proModels.ProMetaEnableContentTrust, proModels.ProMetaEnableContentTrustCosign,
-		proModels.ProMetaPreventVul, proModels.ProMetaAutoScan, proModels.ProMetaReuseSysCVEAllowlist:
+		proModels.ProMetaAutoSBOMGen, proModels.ProMetaPreventVul, proModels.ProMetaAutoScan, proModels.ProMetaReuseSysCVEAllowlist:
 		v, err := strconv.ParseBool(value)
 		if err != nil {
-			return nil, errors.New(nil).WithCode(errors.BadRequestCode).WithMessage("invalid value: %s", value)
+			return nil, errors.New(nil).WithCode(errors.BadRequestCode).WithMessagef("invalid value: %s", value)
 		}
 		metas[key] = strconv.FormatBool(v)
 	case proModels.ProMetaSeverity:
 		severity := vuln.ParseSeverityVersion3(strings.ToLower(value))
 		if severity == vuln.Unknown {
-			return nil, errors.New(nil).WithCode(errors.BadRequestCode).WithMessage("invalid value: %s", value)
+			return nil, errors.New(nil).WithCode(errors.BadRequestCode).WithMessagef("invalid value: %s", value)
 		}
 		metas[proModels.ProMetaSeverity] = strings.ToLower(severity.String())
+	case proModels.ProMetaProxySpeed:
+		v, err := strconv.ParseInt(value, 10, 32)
+		if err != nil {
+			return nil, errors.New(nil).WithCode(errors.BadRequestCode).WithMessagef("invalid value: %s", value)
+		}
+		metas[proModels.ProMetaProxySpeed] = strconv.FormatInt(v, 10)
 	default:
-		return nil, errors.New(nil).WithCode(errors.BadRequestCode).WithMessage("invalid key: %s", key)
+		return nil, errors.New(nil).WithCode(errors.BadRequestCode).WithMessagef("invalid key: %s", key)
 	}
 	return metas, nil
 }

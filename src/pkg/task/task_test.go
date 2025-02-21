@@ -147,6 +147,30 @@ func (t *taskManagerTestSuite) TestList() {
 	t.dao.AssertExpectations(t.T())
 }
 
+func (t *taskManagerTestSuite) TestListScanTasksByReportUUID() {
+	t.dao.On("ListScanTasksByReportUUID", mock.Anything, mock.Anything).Return([]*dao.Task{
+		{
+			ID: 1,
+		},
+	}, nil)
+	tasks, err := t.mgr.ListScanTasksByReportUUID(nil, "uuid")
+	t.Require().Nil(err)
+	t.Require().Len(tasks, 1)
+	t.Equal(int64(1), tasks[0].ID)
+	t.dao.AssertExpectations(t.T())
+}
+
+func (t *taskManagerTestSuite) TestRetrieveStatusFromTask() {
+	t.dao.On("ListScanTasksByReportUUID", mock.Anything, mock.Anything).Return([]*dao.Task{
+		{
+			ID:     1,
+			Status: "Success",
+		},
+	}, nil)
+	status := t.mgr.RetrieveStatusFromTask(nil, "uuid")
+	t.Equal("Success", status)
+}
+
 func TestTaskManagerTestSuite(t *testing.T) {
 	suite.Run(t, &taskManagerTestSuite{})
 }

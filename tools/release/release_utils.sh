@@ -10,16 +10,12 @@ function getAssets {
     local assetsPath=$6
     mkdir $assetsPath && pushd $assetsPath
     gsutil cp gs://$bucket/$branch/$offlinePackage .
-    gsutil cp gs://$bucket/$branch/$offlinePackage.asc .
     md5sum $offlinePackage > md5sum
-    md5sum $offlinePackage.asc >> md5sum
     # Pre-release does not handle online installer packages
     if [ $prerelease = "false" ]
     then
         gsutil cp gs://$bucket/$branch/$onlinePackage .
-        gsutil cp gs://$bucket/$branch/$onlinePackage.asc .
         md5sum $onlinePackage >> md5sum
-        md5sum $onlinePackage.asc >> md5sum
     fi
     popd
 }
@@ -59,8 +55,8 @@ function publishImages {
     local baseTag=$2
     local dockerHubUser=$3
     local dockerHubPassword=$4
+    local images=${@:5}
     docker login -u $dockerHubUser -p $dockerHubPassword
-    local images="$(docker images --format "{{.Repository}}" --filter=reference='goharbor/*:'$baseTag'')"
     for image in $images
     do
         echo "push image: $image"
@@ -68,6 +64,22 @@ function publishImages {
         retry 5 docker push $image:$curTag
     done
     docker logout
+}
+
+function publishPackages {
+    local curTag=$1
+    local baseTag=$2
+    local ghcrUser=$3
+    local ghcrPassword=$4
+    local images=${@:5}
+    docker login ghcr.io -u $ghcrUser -p $ghcrPassword
+    for image in $images
+    do
+        echo "push image: $image"
+        docker tag $image:$baseTag "ghcr.io/"$image:$curTag
+        retry 5 docker push "ghcr.io/"$image:$curTag
+    done
+    docker logout ghcr.io
 }
 
 function retry {

@@ -6,7 +6,6 @@ import { Subscription, timer } from 'rxjs';
 import { ErrorHandler } from '../../../../../shared/units/error-handler';
 import {
     ClrDatagridComparatorInterface,
-    ReplicationJob,
     ReplicationTasks,
 } from '../../../../../shared/services';
 import {
@@ -55,9 +54,9 @@ export class ReplicationTasksComponent implements OnInit, OnDestroy {
     timerDelay: Subscription;
     executionId: string;
     startTimeComparator: ClrDatagridComparatorInterface<ReplicationTask> =
-        new CustomComparator<ReplicationJob>('start_time', 'date');
+        new CustomComparator<ReplicationExecution>('start_time', 'date');
     endTimeComparator: ClrDatagridComparatorInterface<ReplicationTask> =
-        new CustomComparator<ReplicationJob>('end_time', 'date');
+        new CustomComparator<ReplicationExecution>('end_time', 'date');
     tasksTimeout: any;
     constructor(
         private translate: TranslateService,
@@ -253,13 +252,11 @@ export class ReplicationTasksComponent implements OnInit, OnDestroy {
                         count > 0 ||
                         this.execution?.status === executionStatus
                     ) {
-                        if (!this.tasksTimeout) {
-                            this.tasksTimeout = setTimeout(() => {
-                                this.clrLoadTasks(false, {
-                                    page: {},
-                                });
-                            }, REFRESH_TIME_DIFFERENCE);
-                        }
+                        this.tasksTimeout = setTimeout(() => {
+                            this.clrLoadTasks(false, {
+                                page: {},
+                            });
+                        }, REFRESH_TIME_DIFFERENCE);
                     }
                 },
                 error => {

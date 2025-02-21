@@ -15,7 +15,7 @@
 package orm
 
 import (
-	"github.com/beego/beego/orm"
+	"github.com/beego/beego/v2/client/orm"
 	"github.com/jackc/pgconn"
 
 	"github.com/goharbor/harbor/src/lib/errors"
@@ -53,7 +53,7 @@ func AsNotFoundError(err error, messageFormat string, args ...interface{}) *erro
 	if errors.Is(err, orm.ErrNoRows) {
 		e := errors.NotFoundError(nil)
 		if len(messageFormat) > 0 {
-			_ = e.WithMessage(messageFormat, args...)
+			_ = e.WithMessagef(messageFormat, args...)
 		}
 		return e
 	}
@@ -66,7 +66,7 @@ func AsConflictError(err error, messageFormat string, args ...interface{}) *erro
 	if IsDuplicateKeyError(err) {
 		e := errors.New(err).
 			WithCode(errors.ConflictCode).
-			WithMessage(messageFormat, args...)
+			WithMessagef(messageFormat, args...)
 		return e
 	}
 	return nil
@@ -78,7 +78,7 @@ func AsForeignKeyError(err error, messageFormat string, args ...interface{}) *er
 	if isViolatingForeignKeyConstraintError(err) {
 		e := errors.New(err).
 			WithCode(errors.ViolateForeignKeyConstraintCode).
-			WithMessage(messageFormat, args...)
+			WithMessagef(messageFormat, args...)
 		return e
 	}
 	return nil

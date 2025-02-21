@@ -1,7 +1,4 @@
 <div>
-    <h2 class="custom-h2" sub-header-title>
-        {{ 'SIDE_NAV.LOGS' | translate }}
-    </h2>
     <div class="row flex-items-xs-between flex-items-xs-bottom">
         <div></div>
         <div class="action-head-pos">
@@ -68,7 +65,7 @@
                 <clr-dg-cell>{{ l.resource_type }}</clr-dg-cell>
                 <clr-dg-cell>{{ l.operation }}</clr-dg-cell>
                 <clr-dg-cell>{{
-                    l.op_time | harborDatetime: 'short'
+                    l.op_time | harborDatetime : 'short'
                 }}</clr-dg-cell>
             </clr-dg-row>
             <clr-dg-footer>

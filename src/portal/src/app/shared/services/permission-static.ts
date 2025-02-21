@@ -105,33 +105,15 @@ export const USERSTATICPERMISSION = {
             READ: 'read',
         },
     },
-    REPOSITORY_ARTIFACT_LABEL: {
-        KEY: 'artifact-label',
+    REPOSITORY_TAG_SBOM_JOB: {
+        KEY: 'sbom',
         VALUE: {
-            CREATE: 'create',
-            DELETE: 'delete',
-        },
-    },
-    HELM_CHART: {
-        KEY: 'helm-chart',
-        VALUE: {
-            UPLOAD: 'create',
-            DOWNLOAD: 'read',
-            DELETE: 'delete',
-            LIST: 'list',
-        },
-    },
-    HELM_CHART_VERSION: {
-        KEY: 'helm-chart-version',
-        VALUE: {
-            DELETE: 'delete',
-            LIST: 'list',
             CREATE: 'create',
             READ: 'read',
         },
     },
-    HELM_CHART_VERSION_LABEL: {
-        KEY: 'helm-chart-version-label',
+    REPOSITORY_ARTIFACT_LABEL: {
+        KEY: 'artifact-label',
         VALUE: {
             CREATE: 'create',
             DELETE: 'delete',

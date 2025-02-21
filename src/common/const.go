@@ -14,6 +14,8 @@
 
 package common
 
+import "time"
+
 type contextKey string
 
 // const variables
@@ -46,10 +48,10 @@ const (
 	ResourceTypeProject    = "p"
 	ResourceTypeRepository = "r"
 	ResourceTypeImage      = "i"
-	ResourceTypeChart      = "c"
 
 	ExtEndpoint                      = "ext_endpoint"
 	AUTHMode                         = "auth_mode"
+	PrimaryAuthMode                  = "primary_auth_mode"
 	DatabaseType                     = "database_type"
 	PostGreSQLHOST                   = "postgresql_host"
 	PostGreSQLPort                   = "postgresql_port"
@@ -59,6 +61,8 @@ const (
 	PostGreSQLSSLMode                = "postgresql_sslmode"
 	PostGreSQLMaxIdleConns           = "postgresql_max_idle_conns"
 	PostGreSQLMaxOpenConns           = "postgresql_max_open_conns"
+	PostGreSQLConnMaxLifetime        = "postgresql_conn_max_lifetime"
+	PostGreSQLConnMaxIdleTime        = "postgresql_conn_max_idle_time"
 	SelfRegistration                 = "self_registration"
 	CoreURL                          = "core_url"
 	CoreLocalURL                     = "core_local_url"
@@ -90,7 +94,6 @@ const (
 	MaxJobWorkers                    = "max_job_workers"
 	TokenExpiration                  = "token_expiration"
 	AdminInitialPassword             = "admin_initial_password"
-	WithNotary                       = "with_notary"
 	WithTrivy                        = "with_trivy"
 	ScanAllPolicy                    = "scan_all_policy"
 	UAAEndpoint                      = "uaa_endpoint"
@@ -125,24 +128,22 @@ const (
 	GroupMember                       = "g"
 	ReadOnly                          = "read_only"
 	TrivyAdapterURL                   = "trivy_adapter_url"
-	NotaryURL                         = "notary_url"
 	DefaultCoreEndpoint               = "http://core:8080"
-	DefaultNotaryEndpoint             = "http://notary-server:4443"
 	LDAPGroupType                     = 1
 	HTTPGroupType                     = 2
 	OIDCGroupType                     = 3
 	LDAPGroupAdminDn                  = "ldap_group_admin_dn"
 	LDAPGroupMembershipAttribute      = "ldap_group_membership_attribute"
+	LDAPGroupAttachParallel           = "ldap_group_attach_parallel"
 	DefaultRegistryControllerEndpoint = "http://registryctl:8080"
-	WithChartMuseum                   = "with_chartmuseum"
-	ChartRepoURL                      = "chart_repository_url"
-	DefaultChartRepoURL               = "http://chartmuseum:9999"
 	DefaultPortalURL                  = "http://portal:8080"
 	DefaultRegistryCtlURL             = "http://registryctl:8080"
 	// Use this prefix to distinguish harbor user, the prefix contains a special character($), so it cannot be registered as a harbor user.
 	RobotPrefix = "robot$"
 	// System admin defined the robot name prefix.
 	RobotNamePrefix = "robot_name_prefix"
+	// Scanner robot name prefix
+	RobotScannerNamePrefix = "robot_scanner_name_prefix"
 	// Use this prefix to index user who tries to login with web hook token.
 	AuthProxyUserNamePrefix = "tokenreview$"
 	CoreConfigPath          = "/api/v2.0/internalconfig"
@@ -151,10 +152,7 @@ const (
 	OIDCCallbackPath = "/c/oidc/callback"
 	OIDCLoginPath    = "/c/oidc/login"
 
-	AuthProxyRediretPath = "/c/authproxy/redirect"
-
-	ChartUploadCtxKey   = contextKey("chart_upload_event")
-	ChartDownloadCtxKey = contextKey("chart_download_event")
+	AuthProxyRedirectPath = "/c/authproxy/redirect"
 
 	// Global notification enable configuration
 	NotificationEnable = "notification_enable"
@@ -189,6 +187,7 @@ const (
 	TraceOtelTimeout     = "trace_otel_timeout"
 
 	GDPRDeleteUser = "gdpr_delete_user"
+	GDPRAuditLogs  = "gdpr_audit_logs"
 
 	//  These variables are temporary solution for issue: https://github.com/goharbor/harbor/issues/16039
 	//  When user disable the pull count/time/audit log, it will decrease the database access, especially in large concurrency pull scenarios.
@@ -209,7 +208,7 @@ const (
 	// 24h.
 	DefaultCacheExpireHours = 24
 
-	PurgeAuditIncludeOperations = "include_operations"
+	PurgeAuditIncludeEventTypes = "include_event_types"
 	PurgeAuditDryRun            = "dry_run"
 	PurgeAuditRetentionHour     = "audit_retention_hour"
 	// AuditLogForwardEndpoint indicate to forward the audit log to an endpoint
@@ -218,7 +217,37 @@ const (
 	SkipAuditLogDatabase = "skip_audit_log_database"
 	// MaxAuditRetentionHour allowed in audit log purge
 	MaxAuditRetentionHour = 240000
+	// ScannerSkipUpdatePullTime
+	ScannerSkipUpdatePullTime = "scanner_skip_update_pulltime"
+
+	// AuditLogEventsDisabled ...
+	AuditLogEventsDisabled = "disabled_audit_log_event_types"
 
 	// SessionTimeout defines the web session timeout
 	SessionTimeout = "session_timeout"
+
+	// Customized banner message
+	BannerMessage = "banner_message"
+
+	// UIMaxLengthLimitedOfNumber is the max length that UI limited for type number
+	UIMaxLengthLimitedOfNumber = 10
+	// ExecutionStatusRefreshIntervalSeconds is the interval seconds for refreshing execution status
+	ExecutionStatusRefreshIntervalSeconds = "execution_status_refresh_interval_seconds"
+	// QuotaUpdateProvider is the provider for updating quota, currently support Redis and DB
+	QuotaUpdateProvider = "quota_update_provider"
+	// IllegalCharsInUsername is the illegal chars in username
+	IllegalCharsInUsername = `,"~#%$`
+
+	// Beego web config
+	// BeegoMaxMemoryBytes is the max memory(bytes) of the beego web config
+	BeegoMaxMemoryBytes = "beego_max_memory_bytes"
+	// DefaultBeegoMaxMemoryBytes sets default max memory to 128GB
+	DefaultBeegoMaxMemoryBytes = 1 << 37
+	// BeegoMaxUploadSizeBytes is the max upload size(bytes) of the beego web config
+	BeegoMaxUploadSizeBytes = "beego_max_upload_size_bytes"
+	// DefaultBeegoMaxUploadSizeBytes sets default max upload size to 128GB
+	DefaultBeegoMaxUploadSizeBytes = 1 << 37
+
+	// Global Leeway used for token validation
+	JwtLeeway = 60 * time.Second
 )

@@ -1,16 +1,16 @@
-//  Copyright Project Harbor Authors
+// Copyright Project Harbor Authors
 //
-//  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//    http://www.apache.org/licenses/LICENSE-2.0
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the License is distributed on an "AS IS" BASIS,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the License for the specific language governing permissions and
-//  limitations under the License.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package handler
 
@@ -38,7 +38,7 @@ func newConfigAPI() *configAPI {
 	return &configAPI{controller: config.Ctl}
 }
 
-func (c *configAPI) GetConfigurations(ctx context.Context, params configure.GetConfigurationsParams) middleware.Responder {
+func (c *configAPI) GetConfigurations(ctx context.Context, _ configure.GetConfigurationsParams) middleware.Responder {
 	if sec, exist := security.FromContext(ctx); exist {
 		if sec.IsSolutionUser() {
 			cfg, err := c.controller.AllConfigs(ctx)
@@ -104,7 +104,7 @@ func toCfgMap(conf *models.Configurations) (map[string]interface{}, error) {
 	return cfgMap, nil
 }
 
-func (c *configAPI) GetInternalconfig(ctx context.Context, params configure.GetInternalconfigParams) middleware.Responder {
+func (c *configAPI) GetInternalconfig(ctx context.Context, _ configure.GetInternalconfigParams) middleware.Responder {
 	if err := c.RequireSolutionUserAccess(ctx); err != nil {
 		return c.SendError(ctx, err)
 	}

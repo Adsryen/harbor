@@ -57,13 +57,13 @@
             <input
                 clrInput
                 name="tokenExpiration"
-                type="text"
+                type="number"
                 #tokenExpirationInput="ngModel"
-                [(ngModel)]="tokenExpirationValue"
+                [(ngModel)]="currentConfig.token_expiration.value"
                 required
                 pattern="^[1-9]{1}[0-9]*$"
                 id="tokenExpiration"
-                size="20"
+                max="9999999999"
                 [disabled]="!editable" />
             <clr-control-error>{{
                 'TOOLTIP.NUMBER_REQUIRED' | translate
@@ -90,13 +90,13 @@
             <input
                 clrInput
                 name="sessionTimeout"
-                type="text"
+                type="number"
                 #ngSessionTimeout="ngModel"
-                [(ngModel)]="sessionTimeout"
+                [(ngModel)]="currentConfig.session_timeout.value"
                 required
                 pattern="^[1-9]{1}[0-9]*$"
                 id="sessionTimeout"
-                size="10"
+                max="9999999999"
                 [disabled]="!editable" />
             <clr-control-error>{{
                 'TOOLTIP.NUMBER_REQUIRED' | translate
@@ -155,13 +155,13 @@
             <input
                 clrInput
                 name="robotTokenExpiration"
-                type="text"
+                type="number"
                 #robotTokenExpirationInput="ngModel"
-                [(ngModel)]="robotTokenExpirationValue"
+                [(ngModel)]="currentConfig.robot_token_duration.value"
                 required
                 pattern="^[1-9]{1}[0-9]*$"
                 id="robotTokenExpiration"
-                size="20"
+                max="9999999999"
                 [disabled]="!robotExpirationEditable" />
             <clr-control-error>{{
                 'ROBOT_ACCOUNT.NUMBER_REQUIRED' | translate
@@ -194,7 +194,7 @@
                 >
             </div>
         </div>
-        <clr-checkbox-container>
+        <clr-checkbox-container class="center">
             <label id="repo_read_only_lbl" for="repoReadOnly"
                 >{{ 'CONFIG.REPO_READ_ONLY' | translate }}
                 <clr-tooltip>
@@ -252,6 +252,39 @@
                     [disabled]="!currentConfig.notification_enable.editable" />
             </clr-checkbox-wrapper>
         </clr-checkbox-container>
+        <clr-checkbox-container class="center">
+            <label for="scannerSkipUpdatePullTime"
+                >{{ 'CONFIG.SKIP_SCANNER_PULL_TIME' | translate }}
+                <clr-tooltip>
+                    <clr-icon
+                        clrTooltipTrigger
+                        shape="info-circle"
+                        size="24"></clr-icon>
+                    <clr-tooltip-content
+                        clrPosition="top-right"
+                        clrSize="lg"
+                        *clrIfOpen>
+                        <span>{{
+                            'CONFIG.TOOLTIP.SKIP_SCANNER_PULL_TIME_TOOLTIP'
+                                | translate
+                        }}</span>
+                    </clr-tooltip-content>
+                </clr-tooltip>
+            </label>
+            <clr-checkbox-wrapper>
+                <input
+                    type="checkbox"
+                    clrCheckbox
+                    name="scannerSkipUpdatePullTime"
+                    id="scannerSkipUpdatePullTime"
+                    [(ngModel)]="
+                        currentConfig.scanner_skip_update_pulltime.value
+                    "
+                    [disabled]="
+                        !currentConfig.scanner_skip_update_pulltime.editable
+                    " />
+            </clr-checkbox-wrapper>
+        </clr-checkbox-container>
         <clr-input-container>
             <label for="auditLogForwardEndpoint">
                 {{ 'CLEARANCES.FORWARD_ENDPOINT' | translate }}
@@ -282,6 +315,50 @@
                     !currentConfig?.audit_log_forward_endpoint?.editable
                 " />
         </clr-input-container>
+        <div class="clr-form-control">
+            <label for="disableAuditLogEventList" class="clr-control-label">
+                {{ 'CLEARANCES.DISABLE_AUDIT_LOG_EVENT_TYPE' | translate }}
+                <clr-tooltip>
+                    <clr-icon
+                        clrTooltipTrigger
+                        shape="info-circle"
+                        size="24"></clr-icon>
+                    <clr-tooltip-content
+                        clrPosition="top-right"
+                        clrSize="lg"
+                        *clrIfOpen>
+                        <span>{{
+                            'CLEARANCES.DISABLE_AUDIT_LOG_EVENT_TYPE_TOOLTIP'
+                                | translate
+                        }}</span>
+                    </clr-tooltip-content>
+                </clr-tooltip>
+            </label>
+            <div *ngIf="logEventTypes.length === 0">
+                {{ 'CLEARANCES.AUDIT_LOG_EVENT_TYPE_EMPTY' | translate }}
+            </div>
+            <div class="clr-control-container">
+                <div
+                    class="clr-checkbox-wrapper float-left"
+                    *ngFor="let item of logEventTypes">
+                    <input
+                        type="checkbox"
+                        id="{{ item.id }}"
+                        name="logEventTypes"
+                        value="{{ item.value }}"
+                        class="clr-checkbox"
+                        [disabled]="
+                            !currentConfig?.disabled_audit_log_event_types
+                                ?.editable
+                        "
+                        (change)="setLogEventType(item.value)"
+                        [checked]="hasLogEventType(item.value)" />
+                    <label for="{{ item.id }}" class="clr-control-label">{{
+                        item.label
+                    }}</label>
+                </div>
+            </div>
+        </div>
         <clr-checkbox-container class="center">
             <label for="skipAuditLogDatabase"
                 >{{ 'CLEARANCES.SKIP_DATABASE' | translate }}
@@ -313,6 +390,139 @@
                     " />
             </clr-checkbox-wrapper>
         </clr-checkbox-container>
+        <div class="clr-form-control">
+            <label class="clr-control-label">{{
+                'BANNER_MESSAGE.BANNER_MESSAGE' | translate
+            }}</label>
+            <div class="clr-control-container flex-baseline">
+                <div class="clr-textarea-wrapper">
+                    <textarea
+                        id="banner-message"
+                        placeholder="{{
+                            'BANNER_MESSAGE.ENTER_MESSAGE' | translate
+                        }}"
+                        autocomplete="off"
+                        class="clr-textarea"
+                        maxlength="800"
+                        [(ngModel)]="messageText"
+                        [ngModelOptions]="{ standalone: true }"
+                        [disabled]="
+                            !currentConfig.banner_message.editable
+                        "></textarea>
+                </div>
+                <div class="message-type">
+                    <div
+                        class="clr-select-wrapper"
+                        [ngClass]="{
+                            'clr-form-control-disable':
+                                !currentConfig.banner_message.editable ||
+                                !messageText
+                        }">
+                        <label class="message-label">{{
+                            'BANNER_MESSAGE.MESSAGE_TYPE' | translate
+                        }}</label>
+                        <select
+                            id="banner-message-type"
+                            class="clr-select message-select"
+                            [(ngModel)]="messageType"
+                            [ngModelOptions]="{ standalone: true }"
+                            [disabled]="
+                                !currentConfig.banner_message.editable ||
+                                !messageText
+                            ">
+                            <option
+                                *ngFor="let t of bannerMessageTypes"
+                                value="{{ t }}">
+                                {{ translateMessageType(t) | translate }}
+                            </option>
+                        </select>
+                    </div>
+                </div>
+                <div
+                    class="clr-checkbox-wrapper ml-1"
+                    [ngClass]="{
+                        'clr-form-control-disable':
+                            !currentConfig.banner_message.editable ||
+                            !messageText
+                    }">
+                    <input
+                        class="clr-checkbox-inline"
+                        type="checkbox"
+                        [(ngModel)]="messageClosable"
+                        [ngModelOptions]="{ standalone: true }"
+                        [disabled]="
+                            !currentConfig.banner_message.editable ||
+                            !messageText
+                        "
+                        id="banner-message-closable" />
+                    <label
+                        class="clr-control-label"
+                        for="banner-message-closable"
+                        >{{ 'BANNER_MESSAGE.CLOSABLE' | translate }}</label
+                    >
+                </div>
+            </div>
+        </div>
+
+        <div class="clr-form-control">
+            <label class="clr-control-label"></label>
+            <div class="clr-control-container flex-baseline">
+                <div class="clr-textarea-wrapper duration">
+                    <label>{{ 'REPLICATION.DURATION' | translate }}</label>
+                </div>
+                <div
+                    class="clr-input-wrapper flex message-type"
+                    [ngClass]="{
+                        'clr-form-control-disable':
+                            !currentConfig.banner_message.editable ||
+                            !messageText
+                    }">
+                    <label>{{ 'BANNER_MESSAGE.FROM' | translate }}</label>
+                    <clr-date-container>
+                        <input
+                            class="date"
+                            type="date"
+                            id="from"
+                            autocomplete="off"
+                            min="{{ currentDate | date : 'yyyy-MM-dd' }}"
+                            max="{{ messageToDate | date : 'yyyy-MM-dd' }}"
+                            clrDate
+                            readonly
+                            [(ngModel)]="messageFromDate"
+                            [ngModelOptions]="{ standalone: true }"
+                            [disabled]="
+                                !currentConfig.banner_message.editable ||
+                                !messageText
+                            " />
+                    </clr-date-container>
+                </div>
+                <div
+                    class="clr-checkbox-wrapper flex ml-1"
+                    [ngClass]="{
+                        'clr-form-control-disable':
+                            !currentConfig.banner_message.editable ||
+                            !messageText
+                    }">
+                    <label>{{ 'BANNER_MESSAGE.TO' | translate }}</label>
+                    <clr-date-container>
+                        <input
+                            class="date"
+                            clrDate
+                            readonly
+                            type="date"
+                            id="to"
+                            min="{{ minDateForEndDay() | date : 'yyyy-MM-dd' }}"
+                            autocomplete="off"
+                            [(ngModel)]="messageToDate"
+                            [disabled]="
+                                !currentConfig.banner_message.editable ||
+                                !messageText
+                            "
+                            [ngModelOptions]="{ standalone: true }" />
+                    </clr-date-container>
+                </div>
+            </div>
+        </div>
     </section>
 </form>
 <div>

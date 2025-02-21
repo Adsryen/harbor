@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
@@ -84,6 +83,38 @@ func TestAdapter_NewAdapter(t *testing.T) {
 	assert.Nil(t, adapter)
 	assert.NotNil(t, err)
 
+	adapter, err = newAdapter(&model.Registry{
+		Type: model.RegistryTypeAwsEcr,
+		Credential: &model.Credential{
+			AccessKey:    "xxx",
+			AccessSecret: "ppp",
+		},
+		URL: "https://123456.dkr.ecr-fips.test-region.amazonaws.com",
+	})
+	assert.Nil(t, err)
+	assert.NotNil(t, adapter)
+
+	adapter, err = newAdapter(&model.Registry{
+		Type: model.RegistryTypeAwsEcr,
+		Credential: &model.Credential{
+			AccessKey:    "xxx",
+			AccessSecret: "ppp",
+		},
+		URL: "https://123456.dkr.ecr.us-isob-east-1.sc2s.sgov.gov",
+	})
+	assert.Nil(t, err)
+	assert.NotNil(t, adapter)
+
+	adapter, err = newAdapter(&model.Registry{
+		Type: model.RegistryTypeAwsEcr,
+		Credential: &model.Credential{
+			AccessKey:    "xxx",
+			AccessSecret: "ppp",
+		},
+		URL: "https://123456.dkr.ecr.us-iso-east-1.c2s.ic.gov",
+	})
+	assert.Nil(t, err)
+	assert.NotNil(t, adapter)
 }
 
 func getMockAdapter(t *testing.T, hasCred, health bool) (*adapter, *httptest.Server) {
@@ -140,7 +171,7 @@ func getMockAdapter(t *testing.T, hasCred, health bool) (*adapter, *httptest.Ser
 			Pattern: "/",
 			Handler: func(w http.ResponseWriter, r *http.Request) {
 				fmt.Println(r.Method, r.URL)
-				if buf, e := ioutil.ReadAll(&io.LimitedReader{R: r.Body, N: 80}); e == nil {
+				if buf, e := io.ReadAll(&io.LimitedReader{R: r.Body, N: 80}); e == nil {
 					fmt.Println("\t", string(buf))
 				}
 				w.WriteHeader(http.StatusOK)
@@ -250,7 +281,7 @@ func TestAwsAuthCredential_Modify(t *testing.T) {
 			Pattern: "/",
 			Handler: func(w http.ResponseWriter, r *http.Request) {
 				fmt.Println(r.Method, r.URL)
-				if buf, e := ioutil.ReadAll(&io.LimitedReader{R: r.Body, N: 80}); e == nil {
+				if buf, e := io.ReadAll(&io.LimitedReader{R: r.Body, N: 80}); e == nil {
 					fmt.Println("\t", string(buf))
 				}
 				w.WriteHeader(http.StatusOK)

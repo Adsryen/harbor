@@ -15,7 +15,6 @@
 package artifact
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -28,6 +27,7 @@ import (
 	repctl "github.com/goharbor/harbor/src/controller/replication"
 	repctlmodel "github.com/goharbor/harbor/src/controller/replication/model"
 	"github.com/goharbor/harbor/src/lib/config"
+	"github.com/goharbor/harbor/src/lib/orm"
 	_ "github.com/goharbor/harbor/src/pkg/config/db"
 	_ "github.com/goharbor/harbor/src/pkg/config/inmemory"
 	"github.com/goharbor/harbor/src/pkg/notification"
@@ -109,7 +109,7 @@ func TestReplicationHandler_Handle(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := handler.Handle(context.TODO(), tt.args.data)
+			err := handler.Handle(orm.Context(), tt.args.data)
 			if tt.wantErr {
 				require.NotNil(t, err, "Error: %s", err)
 				return
@@ -145,4 +145,22 @@ func TestIsLocalRegistry(t *testing.T) {
 		URL:  "http://127.0.0.1:5000",
 	}
 	assert.False(t, isLocalRegistry(reg2))
+}
+
+func TestReplicationHandler_ShortResourceName(t *testing.T) {
+	namespace, resource := getMetadataFromResource("busybox:v1")
+	assert.Equal(t, "", namespace)
+	assert.Equal(t, "busybox:v1", resource)
+}
+
+func TestReplicationHandler_NormalResourceName(t *testing.T) {
+	namespace, resource := getMetadataFromResource("library/busybox:v1")
+	assert.Equal(t, "library", namespace)
+	assert.Equal(t, "busybox:v1", resource)
+}
+
+func TestReplicationHandler_LongResourceName(t *testing.T) {
+	namespace, resource := getMetadataFromResource("library/bitnami/fluentd:1.13.3-debian-10-r0")
+	assert.Equal(t, "library", namespace)
+	assert.Equal(t, "bitnami/fluentd:1.13.3-debian-10-r0", resource)
 }

@@ -10,12 +10,12 @@ import { of } from 'rxjs';
 import { SharedTestingModule } from '../../../../shared/shared.module';
 import { ErrorHandler } from '../../../../shared/units/error-handler';
 import { MessageHandlerService } from '../../../../shared/services/message-handler.service';
+import { SessionService } from '../../../../shared/services/session.service';
 import { Component, ViewChild } from '@angular/core';
 
 const mockSystemInfo: SystemInfo[] = [
     {
         with_trivy: true,
-        with_notary: true,
         with_admiral: false,
         admiral_endpoint: 'NA',
         auth_mode: 'db_auth',
@@ -27,7 +27,6 @@ const mockSystemInfo: SystemInfo[] = [
     },
     {
         with_trivy: false,
-        with_notary: false,
         with_admiral: false,
         admiral_endpoint: 'NA',
         auth_mode: 'db_auth',
@@ -67,6 +66,7 @@ const mockProjectPolicies: Project[] | any[] = [
         repo_count: 0,
         metadata: {
             auto_scan: 'true',
+            auto_sbom_generation: 'true',
             enable_content_trust: 'true',
             prevent_vul: 'true',
             public: 'true',
@@ -100,6 +100,14 @@ const userPermissionService = {
         return of(true);
     },
 };
+
+const sessionService = {
+    getCurrentUser() {
+        return of({
+            has_admin_role: true,
+        });
+    },
+};
 describe('ProjectPolicyConfigComponent', () => {
     let fixture: ComponentFixture<TestHostComponent>,
         component: TestHostComponent;
@@ -115,6 +123,7 @@ describe('ProjectPolicyConfigComponent', () => {
                 { provide: ErrorHandler, useClass: MessageHandlerService },
                 { provide: ProjectService, useValue: projectService },
                 { provide: SystemInfoService, useValue: systemInfoService },
+                { provide: SessionService, useValue: sessionService },
                 {
                     provide: UserPermissionService,
                     useValue: userPermissionService,
@@ -141,6 +150,10 @@ describe('ProjectPolicyConfigComponent', () => {
         ).toBeTruthy();
         expect(
             component.projectPolicyConfigComponent.projectPolicy.ScanImgOnPush
+        ).toBeTruthy();
+        expect(
+            component.projectPolicyConfigComponent.projectPolicy
+                .GenerateSbomOnPush
         ).toBeTruthy();
     });
     it('should get hasChangeConfigRole', () => {

@@ -54,6 +54,7 @@ export class ComplexValueItem {
 export class Configuration {
     [key: string]: any | any[];
     auth_mode: StringValueItem;
+    primary_auth_mode: BoolValueItem;
     project_creation_restriction: StringValueItem;
     self_registration: BoolValueItem;
     ldap_base_dn: StringValueItem;
@@ -71,6 +72,7 @@ export class Configuration {
     ldap_group_search_scope: NumberValueItem;
     ldap_group_membership_attribute: StringValueItem;
     ldap_group_admin_dn: StringValueItem;
+    ldap_group_attach_parallel: BoolValueItem;
     uaa_client_id: StringValueItem;
     uaa_client_secret?: StringValueItem;
     uaa_endpoint: StringValueItem;
@@ -110,10 +112,14 @@ export class Configuration {
     oidc_admin_group: StringValueItem;
     oidc_group_filter: StringValueItem;
     audit_log_forward_endpoint: StringValueItem;
+    disabled_audit_log_event_types: StringValueItem;
     skip_audit_log_database: BoolValueItem;
     session_timeout: NumberValueItem;
+    scanner_skip_update_pulltime: BoolValueItem;
+    banner_message: StringValueItem;
     public constructor() {
         this.auth_mode = new StringValueItem('db_auth', true);
+        this.primary_auth_mode = new BoolValueItem(false, true);
         this.project_creation_restriction = new StringValueItem(
             'everyone',
             true
@@ -184,8 +190,14 @@ export class Configuration {
         this.count_per_project = new NumberValueItem(-1, true);
         this.storage_per_project = new NumberValueItem(-1, true);
         this.audit_log_forward_endpoint = new StringValueItem('', true);
+        this.disabled_audit_log_event_types = new StringValueItem('', true);
         this.skip_audit_log_database = new BoolValueItem(false, true);
         this.session_timeout = new NumberValueItem(60, true);
+        this.scanner_skip_update_pulltime = new BoolValueItem(false, true);
+        this.banner_message = new StringValueItem(
+            JSON.stringify(new BannerMessage()),
+            true
+        );
     }
 }
 
@@ -204,3 +216,28 @@ export enum Triggers {
     SCHEDULE = 'Schedule',
     EVENT = 'Event',
 }
+
+export class BannerMessage {
+    message: string;
+    closable: boolean;
+    type: string;
+    fromDate: Date;
+    toDate: Date;
+    constructor() {
+        this.closable = false;
+    }
+}
+
+export enum BannerMessageType {
+    SUCCESS = 'success',
+    INFO = 'info',
+    WARNING = 'warning',
+    ERROR = 'danger',
+}
+
+export const BannerMessageI18nMap = {
+    [BannerMessageType.SUCCESS]: 'BANNER_MESSAGE.SUCCESS',
+    [BannerMessageType.INFO]: 'BANNER_MESSAGE.INFO',
+    [BannerMessageType.WARNING]: 'BANNER_MESSAGE.WARNING',
+    [BannerMessageType.ERROR]: 'BANNER_MESSAGE.DANGER',
+};

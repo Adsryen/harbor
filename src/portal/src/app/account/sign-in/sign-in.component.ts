@@ -118,13 +118,6 @@ export class SignInComponent implements AfterViewChecked, OnInit {
 
     // App title
     public get appTitle(): string {
-        if (
-            this.appConfigService.getConfig() &&
-            this.appConfigService.getConfig().with_admiral
-        ) {
-            return 'APP_TITLE.VIC';
-        }
-
         return 'APP_TITLE.VMW_HARBOR';
     }
 
@@ -157,6 +150,9 @@ export class SignInComponent implements AfterViewChecked, OnInit {
             this.appConfigService.getConfig().auth_mode ===
                 CONFIG_AUTH_MODE.OIDC_AUTH
         );
+    }
+    getOIDCProviderName(): string {
+        return this.appConfigService.getConfig()?.oidc_provider_name || null;
     }
     clickRememberMe($event: any): void {
         if ($event && $event.target) {
@@ -266,7 +262,10 @@ export class SignInComponent implements AfterViewChecked, OnInit {
                 this.remeberMe();
 
                 // Redirect to the right router-guard
-                if (this.redirectUrl === '') {
+                if (
+                    !this.redirectUrl ||
+                    this.redirectUrl.startsWith(CommonRoutes.EMBEDDED_SIGN_IN)
+                ) {
                     // Routing to the default location
                     this.router.navigateByUrl(CommonRoutes.HARBOR_DEFAULT);
                 } else {

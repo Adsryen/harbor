@@ -17,7 +17,7 @@ package dao
 import (
 	"context"
 
-	beego_orm "github.com/beego/beego/orm"
+	beego_orm "github.com/beego/beego/v2/client/orm"
 
 	"github.com/goharbor/harbor/src/lib/errors"
 	"github.com/goharbor/harbor/src/lib/orm"
@@ -119,7 +119,7 @@ func (d *dao) Update(ctx context.Context, tag *tag.Tag, props ...string) error {
 		return err
 	}
 	if n == 0 {
-		return errors.NotFoundError(nil).WithMessage("tag %d not found", tag.ID)
+		return errors.NotFoundError(nil).WithMessagef("tag %d not found", tag.ID)
 	}
 	return nil
 }
@@ -135,7 +135,7 @@ func (d *dao) Delete(ctx context.Context, id int64) error {
 		return err
 	}
 	if n == 0 {
-		return errors.NotFoundError(nil).WithMessage("tag %d not found", id)
+		return errors.NotFoundError(nil).WithMessagef("tag %d not found", id)
 	}
 	return nil
 }

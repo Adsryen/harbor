@@ -12,10 +12,11 @@ import { SummaryComponent } from './artifact-additions/summary/summary.component
 import { DependenciesComponent } from './artifact-additions/dependencies/dependencies.component';
 import { BuildHistoryComponent } from './artifact-additions/build-history/build-history.component';
 import { ArtifactVulnerabilitiesComponent } from './artifact-additions/artifact-vulnerabilities/artifact-vulnerabilities.component';
+import { ArtifactSbomComponent } from './artifact-additions/artifact-sbom/artifact-sbom.component';
 import { ArtifactDefaultService, ArtifactService } from './artifact.service';
 import { ArtifactDetailRoutingResolverService } from '../../../../services/routing-resolvers/artifact-detail-routing-resolver.service';
-import { ResultTipComponent } from './vulnerability-scanning/result-tip.component';
 import { ResultBarChartComponent } from './vulnerability-scanning/result-bar-chart.component';
+import { ResultSbomComponent } from './sbom-scanning/sbom-scan.component';
 import { ResultTipHistogramComponent } from './vulnerability-scanning/result-tip-histogram/result-tip-histogram.component';
 import { HistogramChartComponent } from './vulnerability-scanning/histogram-chart/histogram-chart.component';
 import { ArtifactInfoComponent } from './artifact-list-page/artifact-list/artifact-info/artifact-info.component';
@@ -24,6 +25,8 @@ import { ArtifactListPageService } from './artifact-list-page/artifact-list-page
 import { CopyArtifactComponent } from './artifact-list-page/artifact-list/artifact-list-tab/copy-artifact/copy-artifact.component';
 import { CopyDigestComponent } from './artifact-list-page/artifact-list/artifact-list-tab/copy-digest/copy-digest.component';
 import { ArtifactFilterComponent } from './artifact-list-page/artifact-list/artifact-list-tab/artifact-filter/artifact-filter.component';
+import { PullCommandComponent } from './artifact-list-page/artifact-list/artifact-list-tab/pull-command/pull-command.component';
+import { SbomTipHistogramComponent } from './sbom-scanning/sbom-tip-histogram/sbom-tip-histogram.component';
 
 const routes: Routes = [
     {
@@ -78,9 +81,11 @@ const routes: Routes = [
         SummaryComponent,
         DependenciesComponent,
         BuildHistoryComponent,
+        ArtifactSbomComponent,
         ArtifactVulnerabilitiesComponent,
-        ResultTipComponent,
         ResultBarChartComponent,
+        ResultSbomComponent,
+        SbomTipHistogramComponent,
         ResultTipHistogramComponent,
         HistogramChartComponent,
         ArtifactInfoComponent,
@@ -88,6 +93,7 @@ const routes: Routes = [
         CopyArtifactComponent,
         CopyDigestComponent,
         ArtifactFilterComponent,
+        PullCommandComponent,
     ],
     imports: [RouterModule.forChild(routes), SharedModule],
     providers: [

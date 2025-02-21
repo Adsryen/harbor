@@ -1,16 +1,16 @@
-//  Copyright Project Harbor Authors
+// Copyright Project Harbor Authors
 //
-//  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//    http://www.apache.org/licenses/LICENSE-2.0
 //
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the License is distributed on an "AS IS" BASIS,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the License for the specific language governing permissions and
-//  limitations under the License.
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package handler
 
@@ -31,7 +31,6 @@ import (
 	taskCtl "github.com/goharbor/harbor/src/controller/task"
 	"github.com/goharbor/harbor/src/jobservice/job"
 	"github.com/goharbor/harbor/src/lib/errors"
-	liberrors "github.com/goharbor/harbor/src/lib/errors"
 	"github.com/goharbor/harbor/src/lib/q"
 	"github.com/goharbor/harbor/src/pkg/p2p/preheat/models/policy"
 	instanceModel "github.com/goharbor/harbor/src/pkg/p2p/preheat/models/provider"
@@ -66,7 +65,7 @@ type preheatAPI struct {
 	taskCtl      taskCtl.Controller
 }
 
-func (api *preheatAPI) Prepare(ctx context.Context, operation string, params interface{}) middleware.Responder {
+func (api *preheatAPI) Prepare(_ context.Context, _ string, _ interface{}) middleware.Responder {
 	return nil
 }
 
@@ -161,7 +160,7 @@ func (api *preheatAPI) ListInstances(ctx context.Context, params operation.ListI
 		WithLink(api.Links(ctx, params.HTTPRequest.URL, total, query.PageNumber, query.PageSize).String())
 }
 
-func (api *preheatAPI) ListProviders(ctx context.Context, params operation.ListProvidersParams) middleware.Responder {
+func (api *preheatAPI) ListProviders(ctx context.Context, _ operation.ListProvidersParams) middleware.Responder {
 	if err := api.RequireSystemAccess(ctx, rbac.ActionList, rbac.ResourcePreatInstance); err != nil {
 		return api.SendError(ctx, err)
 	}
@@ -334,7 +333,7 @@ func (api *preheatAPI) DeletePolicy(ctx context.Context, params operation.Delete
 		return nil
 	}
 	executions, err := api.executionCtl.List(ctx, &q.Query{Keywords: map[string]interface{}{
-		"vendor_type": job.P2PPreheat,
+		"vendor_type": job.P2PPreheatVendorType,
 		"vendor_id":   policy.ID,
 	}})
 	if err != nil {
@@ -343,7 +342,7 @@ func (api *preheatAPI) DeletePolicy(ctx context.Context, params operation.Delete
 
 	// Detecting running tasks under the policy
 	if err = detectRunningExecutions(executions); err != nil {
-		return api.SendError(ctx, liberrors.New(err).WithCode(liberrors.PreconditionCode))
+		return api.SendError(ctx, errors.New(err).WithCode(errors.PreconditionCode))
 	}
 
 	err = api.preheatCtl.DeletePolicy(ctx, policy.ID)
@@ -442,7 +441,7 @@ func (api *preheatAPI) PingInstances(ctx context.Context, params operation.PingI
 	if params.Instance.ID > 0 {
 		// by ID
 		instance, err = api.preheatCtl.GetInstance(ctx, params.Instance.ID)
-		if liberrors.IsNotFoundErr(err) {
+		if errors.IsNotFoundErr(err) {
 			return operation.NewPingInstancesNotFound()
 		}
 		if err != nil {
@@ -484,11 +483,12 @@ func convertPolicyToPayload(policy *policy.Schema) (*models.PreheatPolicy, error
 		ProjectID:    policy.ProjectID,
 		ProviderID:   policy.ProviderID,
 		Trigger:      policy.TriggerStr,
+		ExtraAttrs:   policy.ExtraAttrsStr,
 		UpdateTime:   strfmt.DateTime(policy.UpdatedTime),
 	}, nil
 }
 
-// convertParamPolicyToPolicy converts params policy to pkg model policy
+// convertParamPolicyToModelPolicy converts params policy to pkg model policy
 func convertParamPolicyToModelPolicy(model *models.PreheatPolicy) (*policy.Schema, error) {
 	if model == nil {
 		return nil, errors.New("policy can not be nil")
@@ -504,16 +504,17 @@ func convertParamPolicyToModelPolicy(model *models.PreheatPolicy) (*policy.Schem
 	}
 
 	return &policy.Schema{
-		ID:          model.ID,
-		Name:        model.Name,
-		Description: model.Description,
-		ProjectID:   model.ProjectID,
-		ProviderID:  model.ProviderID,
-		FiltersStr:  model.Filters,
-		TriggerStr:  model.Trigger,
-		Enabled:     model.Enabled,
-		CreatedAt:   time.Time(model.CreationTime),
-		UpdatedTime: time.Time(model.UpdateTime),
+		ID:            model.ID,
+		Name:          model.Name,
+		Description:   model.Description,
+		ProjectID:     model.ProjectID,
+		ProviderID:    model.ProviderID,
+		FiltersStr:    model.Filters,
+		TriggerStr:    model.Trigger,
+		Enabled:       model.Enabled,
+		ExtraAttrsStr: model.ExtraAttrs,
+		CreatedAt:     time.Time(model.CreationTime),
+		UpdatedTime:   time.Time(model.UpdateTime),
 	}, nil
 }
 
@@ -564,6 +565,7 @@ func convertParamInstanceToModelInstance(model *models.Instance) (*instanceModel
 
 	return &instanceModel.Instance{
 		AuthData:       string(authData),
+		AuthInfo:       model.AuthInfo,
 		AuthMode:       model.AuthMode,
 		Default:        model.Default,
 		Description:    model.Description,
@@ -655,7 +657,7 @@ func (api *preheatAPI) ListExecutions(ctx context.Context, params operation.List
 	}
 
 	if query != nil {
-		query.Keywords["vendor_type"] = job.P2PPreheat
+		query.Keywords["vendor_type"] = job.P2PPreheatVendorType
 		query.Keywords["vendor_id"] = policy.ID
 	}
 
@@ -823,7 +825,7 @@ func (api *preheatAPI) requireExecutionInProject(ctx context.Context, projectNam
 		return err
 	}
 
-	if exec != nil && exec.VendorType == job.P2PPreheat && exec.VendorID == plc.ID {
+	if exec != nil && exec.VendorType == job.P2PPreheatVendorType && exec.VendorID == plc.ID {
 		return nil
 	}
 

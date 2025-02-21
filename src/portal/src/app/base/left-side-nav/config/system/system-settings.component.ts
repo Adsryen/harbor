@@ -1,7 +1,20 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
-import { NgForm } from '@angular/forms';
-import { Configuration } from '../config';
 import {
+    AfterViewChecked,
+    ChangeDetectorRef,
+    Component,
+    OnDestroy,
+    OnInit,
+    ViewChild,
+} from '@angular/core';
+import { NgForm } from '@angular/forms';
+import {
+    BannerMessage,
+    BannerMessageI18nMap,
+    BannerMessageType,
+    Configuration,
+} from '../config';
+import {
+    clone,
     CURRENT_BASE_HREF,
     getChanges,
     isEmpty,
@@ -10,14 +23,25 @@ import { ConfigService } from '../config.service';
 import { AppConfigService } from '../../../../services/app-config.service';
 import { finalize } from 'rxjs/operators';
 import { MessageHandlerService } from '../../../../shared/services/message-handler.service';
+import {
+    EventService,
+    HarborEvent,
+} from '../../../../services/event-service/event.service';
+import { Subscription } from 'rxjs';
+import { AuditlogService } from 'ng-swagger-gen/services';
+import { AuditLogEventType } from 'ng-swagger-gen/models';
 
 @Component({
     selector: 'system-settings',
     templateUrl: './system-settings.component.html',
     styleUrls: ['./system-settings.component.scss'],
 })
-export class SystemSettingsComponent implements OnInit {
+export class SystemSettingsComponent
+    implements OnInit, OnDestroy, AfterViewChecked
+{
+    bannerMessageTypes: string[] = Object.values(BannerMessageType);
     onGoing = false;
+    loading = false;
     downloadLink: string;
     get currentConfig(): Configuration {
         return this.conf.getConfig();
@@ -26,18 +50,131 @@ export class SystemSettingsComponent implements OnInit {
     set currentConfig(cfg: Configuration) {
         this.conf.setConfig(cfg);
     }
+
+    messageText: string;
+    messageType: string;
+    messageClosable: boolean;
+    messageFromDate: Date;
+    messageToDate: Date;
+    // the copy of bannerMessage
+    messageTextCopy: string;
+    messageTypeCopy: string;
+    messageClosableCopy: boolean;
+    messageFromDateCopy: Date;
+    messageToDateCopy: Date;
+    bannerRefreshSub: Subscription;
+    currentDate: Date = new Date();
+    logEventTypes: Record<string, string>[] = [];
+    selectedLogEventTypes: string[] = clone([]);
     @ViewChild('systemConfigFrom') systemSettingsForm: NgForm;
 
     constructor(
         private appConfigService: AppConfigService,
+        private conf: ConfigService,
+        private logService: AuditlogService,
+        private event: EventService,
         private errorHandler: MessageHandlerService,
-        private conf: ConfigService
+        private changeDetectorRef: ChangeDetectorRef
     ) {
         this.downloadLink = CURRENT_BASE_HREF + '/systeminfo/getcert';
     }
 
     ngOnInit() {
         this.conf.resetConfig();
+        if (!this.bannerRefreshSub) {
+            this.bannerRefreshSub = this.event?.subscribe(
+                HarborEvent.REFRESH_BANNER_MESSAGE,
+                () => {
+                    this.setValueForBannerMessage();
+                    this.setValueForDisabledAuditLogEventTypes();
+                }
+            );
+        }
+        if (this.currentConfig.banner_message) {
+            this.setValueForBannerMessage();
+        }
+        this.initLogEventTypes();
+        this.setValueForDisabledAuditLogEventTypes();
+    }
+
+    ngAfterViewChecked() {
+        this.changeDetectorRef.detectChanges();
+    }
+
+    ngOnDestroy() {
+        if (this.bannerRefreshSub) {
+            this.bannerRefreshSub.unsubscribe();
+            this.bannerRefreshSub = null;
+        }
+    }
+
+    initLogEventTypes() {
+        this.loading = true;
+        this.logService
+            .listAuditLogEventTypesResponse()
+            .pipe(finalize(() => (this.loading = false)))
+            .subscribe(
+                response => {
+                    const auditLogEventTypes =
+                        response.body as AuditLogEventType[];
+                    this.logEventTypes = auditLogEventTypes.map(event => ({
+                        label:
+                            event.event_type.charAt(0).toUpperCase() +
+                            event.event_type.slice(1).replace(/_/g, ' '),
+                        value: event.event_type,
+                        id: event.event_type,
+                    }));
+                },
+                error => {
+                    this.errorHandler.error(error);
+                }
+            );
+    }
+
+    setValueForDisabledAuditLogEventTypes() {
+        const checkedEventTypes =
+            this.currentConfig?.disabled_audit_log_event_types?.value;
+        this.selectedLogEventTypes =
+            checkedEventTypes?.split(',')?.filter(evt => evt !== '') ?? [];
+    }
+
+    setValueForBannerMessage() {
+        if (this.currentConfig.banner_message.value) {
+            this.messageText = (
+                JSON.parse(
+                    this.currentConfig.banner_message.value
+                ) as BannerMessage
+            ).message;
+            this.messageType = (
+                JSON.parse(
+                    this.currentConfig.banner_message.value
+                ) as BannerMessage
+            ).type;
+            this.messageClosable = (
+                JSON.parse(
+                    this.currentConfig.banner_message.value
+                ) as BannerMessage
+            ).closable;
+            this.messageFromDate = (
+                JSON.parse(
+                    this.currentConfig.banner_message.value
+                ) as BannerMessage
+            ).fromDate;
+            this.messageToDate = (
+                JSON.parse(
+                    this.currentConfig.banner_message.value
+                ) as BannerMessage
+            ).toDate;
+        } else {
+            this.messageText = null;
+            this.messageType = BannerMessageType.WARNING;
+            this.messageClosable = false;
+        }
+        this.messageTextCopy = this.messageText;
+        this.messageTypeCopy = this.messageType;
+        this.messageClosableCopy = this.messageClosable;
+        this.messageFromDateCopy = this.messageFromDate;
+        this.messageToDateCopy = this.messageToDate;
     }
 
     get editable(): boolean {
@@ -56,33 +193,6 @@ export class SystemSettingsComponent implements OnInit {
         );
     }
 
-    get tokenExpirationValue() {
-        return this.currentConfig.token_expiration.value;
-    }
-
-    set tokenExpirationValue(v) {
-        // convert string to number
-        this.currentConfig.token_expiration.value = +v;
-    }
-
-    get sessionTimeout() {
-        return this.currentConfig.session_timeout.value;
-    }
-
-    set sessionTimeout(v) {
-        // convert string to number
-        this.currentConfig.session_timeout.value = +v;
-    }
-
-    get robotTokenExpirationValue() {
-        return this.currentConfig.robot_token_duration.value;
-    }
-
-    set robotTokenExpirationValue(v) {
-        // convert string to number
-        this.currentConfig.robot_token_duration.value = +v;
-    }
-
     robotNamePrefixEditable(): boolean {
         return (
             this.currentConfig &&
@@ -96,7 +206,36 @@ export class SystemSettingsComponent implements OnInit {
     }
 
     public hasChanges(): boolean {
-        return !isEmpty(this.getChanges());
+        return !isEmpty(this.getChanges()) || this.hasBannerMessageChanged();
+    }
+
+    hasBannerMessageChanged() {
+        return (
+            this.messageTextCopy != this.messageText ||
+            this.messageTypeCopy != this.messageType ||
+            this.messageClosableCopy != this.messageClosable ||
+            this.messageFromDateCopy != this.messageFromDate ||
+            this.messageToDateCopy != this.messageToDate
+        );
+    }
+
+    hasLogEventType(resourceType: string): boolean {
+        return this.selectedLogEventTypes?.indexOf(resourceType) !== -1;
+    }
+
+    setLogEventType(resourceType: string) {
+        if (this.selectedLogEventTypes.indexOf(resourceType) === -1) {
+            this.selectedLogEventTypes.push(resourceType);
+        } else {
+            this.selectedLogEventTypes.splice(
+                this.selectedLogEventTypes.findIndex(
+                    item => item === resourceType
+                ),
+                1
+            );
+        }
+        this.currentConfig.disabled_audit_log_event_types.value =
+            this.selectedLogEventTypes.join(',');
     }
 
     public getChanges() {
@@ -122,7 +261,10 @@ export class SystemSettingsComponent implements OnInit {
                 prop === 'robot_name_prefix' ||
                 prop === 'audit_log_forward_endpoint' ||
                 prop === 'skip_audit_log_database' ||
-                prop === 'session_timeout'
+                prop === 'session_timeout' ||
+                prop === 'scanner_skip_update_pulltime' ||
+                prop === 'disabled_audit_log_event_types' ||
+                prop === 'banner_message'
             ) {
                 changes[prop] = allChanges[prop];
             }
@@ -154,6 +296,19 @@ export class SystemSettingsComponent implements OnInit {
      */
     public save(): void {
         let changes = this.getChanges();
+        if (this.hasBannerMessageChanged()) {
+            const bm = new BannerMessage();
+            bm.message = this.messageText;
+            bm.type = this.messageType;
+            bm.closable = this.messageClosable;
+            bm.fromDate = this.messageFromDate;
+            bm.toDate = this.messageToDate;
+            if (bm.message) {
+                changes['banner_message'] = JSON.stringify(bm);
+            } else {
+                changes['banner_message'] = '';
+            }
+        }
         if (!isEmpty(changes)) {
             this.onGoing = true;
             this.conf
@@ -165,12 +320,6 @@ export class SystemSettingsComponent implements OnInit {
                         // Unfortunately API does not do that
                         // So we need to call update function again
                         this.conf.updateConfig();
-                        // Handle read only
-                        if (changes['read_only']) {
-                            this.errorHandler.handleReadOnly();
-                        } else {
-                            this.errorHandler.clear();
-                        }
                         // Reload bootstrap option
                         this.appConfigService.load().subscribe(
                             () => {},
@@ -215,5 +364,13 @@ export class SystemSettingsComponent implements OnInit {
         if (!e?.target?.value) {
             this.currentConfig.skip_audit_log_database.value = false;
         }
+    }
+
+    translateMessageType(type: string): string {
+        return BannerMessageI18nMap[type] || type;
+    }
+
+    minDateForEndDay(): Date {
+        return this.messageFromDate ? this.messageFromDate : this.currentDate;
     }
 }
